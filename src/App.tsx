@@ -575,6 +575,23 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {/* Обратная связь */}
+        <div className="mt-8 mb-12 w-full flex flex-col items-center">
+          <a
+            href="https://docs.google.com/forms/d/e/1FAIpQLSfhCus-2jCHuhyRteGpFJ83rW_deEx61DiMZP2dqiTCf-g0Lw/viewform?usp=header"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex items-center gap-3 px-8 py-4 rounded-full font-bold text-base cursor-pointer transition-all duration-300 shadow-[0_6px_15px_rgba(0,0,0,0.12)] bg-gradient-to-r from-[#42a5f5] via-[#5c6bc0] to-[#7e57c2] text-white hover:shadow-[0_8px_25px_rgba(94,53,177,0.35)] hover:-translate-y-1 active:translate-y-0 active:scale-95 no-underline"
+          >
+            <span className="text-2xl transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110">💬</span>
+            <span>Обратная связь</span>
+            <span className="text-lg transition-transform duration-300 group-hover:translate-x-1">↗</span>
+          </a>
+          <p className="mt-3 text-sm text-[#8d6e63] text-center">
+            Нашли баг или хотите предложить идею? Напишите нам! 🙌
+          </p>
+        </div>
       </main>
 
       {/* Win Modal */}
@@ -593,6 +610,18 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Плавающая кнопка обратной связи */}
+      <a
+        href="https://docs.google.com/forms/d/e/1FAIpQLSfhCus-2jCHuhyRteGpFJ83rW_deEx61DiMZP2dqiTCf-g0Lw/viewform?usp=header"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-[999] flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all duration-300 shadow-[0_6px_20px_rgba(94,53,177,0.3)] bg-gradient-to-r from-[#42a5f5] via-[#5c6bc0] to-[#7e57c2] text-white hover:shadow-[0_8px_30px_rgba(94,53,177,0.5)] hover:-translate-y-1 active:translate-y-0 active:scale-95 no-underline animate-[floatBtn_3s_ease-in-out_infinite]"
+        title="Обратная связь"
+      >
+        <span className="text-xl">💬</span>
+        <span className="hidden sm:inline">Обратная связь</span>
+      </a>
 
       {/* CSS Animations */}
       <style>{`
@@ -619,6 +648,10 @@ export default function App() {
           50% { transform: translateX(10px); }
           75% { transform: translateX(-10px); }
           100% { transform: translateX(0); }
+        }
+        @keyframes floatBtn {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
         }
       `}</style>
     </div>
