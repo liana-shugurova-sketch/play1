@@ -191,6 +191,12 @@ export default function App() {
       clearTimerRef.current = null;
     }
     
+    // Отменяем таймер сообщения подсказки
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
+    }
+    
     setTiles(prev => prev.map((t, i) => i === index ? { ...t, used: true } : t));
     setSelectedIndices(prev => [...prev, index]);
     setMessage('');
@@ -200,8 +206,17 @@ export default function App() {
   const removeLastLetter = () => {
     if (selectedIndices.length === 0) return;
     const lastIdx = selectedIndices[selectedIndices.length - 1];
+    
+    // Отменяем таймер сообщения подсказки
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
+    }
+    
     setTiles(prev => prev.map((tile, i) => i === lastIdx ? { ...tile, used: false } : tile));
     setSelectedIndices(prev => prev.slice(0, -1));
+    setMessage('');
+    setMessageType('');
   };
 
   const checkWord = () => {
@@ -212,6 +227,14 @@ export default function App() {
       clearTimeout(clearTimerRef.current);
       clearTimerRef.current = null;
     }
+    
+    // Отменяем таймер сообщения подсказки
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
+    }
+    setMessage('');
+    setMessageType('');
     
     if (word.length < 3) {
       showMessage('Слово слишком короткое! (мин. 3 буквы)', 'error');
