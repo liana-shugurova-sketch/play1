@@ -17,7 +17,7 @@ interface Level {
 const gameLevels: Level[] = [
   {
     letters: "ШКОЛА",
-    words: ["ШОК", "КОЛ", "КОШ", "ЛАК", "КОЛА", "ШАЛ"]
+    words: ["ШОК", "КОЛ", "ЛАК", "КОЛА", "ШАЛ"]
   },
   {
     letters: "ДОМИК",
@@ -25,25 +25,64 @@ const gameLevels: Level[] = [
   },
   {
     letters: "КАРТА",
-    words: ["КАР", "ТАР", "РАК", "АРТ", "ТАРА", "КАРТА", "АРКА"]
+    words: ["РАК", "АРТ", "ТАРА", "КАРТА", "АРКА", "ТРАК"]
   },
   {
     letters: "КОРОВА",
-    words: ["КОР", "РОВ", "ОКА", "ВАР", "РАК", "КОРОВА", "ВОР"]
+    words: ["РОВ", "ВАР", "РАК", "КОРОВА", "ВОР", "ОКО"]
   },
   {
     letters: "МАСКА",
-    words: ["МАС", "САМ", "МАК", "МАСКА", "КАМА"]
+    words: ["САМ", "МАК", "МАСКА", "КАМА", "АКС"]
   },
   {
     letters: "МОЛОКО",
-    words: ["МОЛ", "КОЛ", "ЛОМ", "КОМ", "ОКО", "МОЛОКО", "ОКОМ"]
+    words: ["МОЛ", "КОЛ", "ЛОМ", "КОМ", "ОКО", "МОЛОКО"]
   },
   {
     letters: "РАДИО",
-    words: ["РАД", "ДАР", "РОД", "ИОД", "АИД"]
+    words: ["РАД", "ДАР", "РОД", "ИОД", "ДИО"]
   }
 ];
+
+// --- ЗНАЧЕНИЯ СЛОВ ---
+const wordDefinitions: Record<string, string> = {
+  "ШОК": "Сильное нервное потрясение, состояние сильного удивления или испуга",
+  "КОЛ": "Заострённый деревянный шест, вбитый в землю",
+  "ЛАК": "Прозрачный раствор для покрытия поверхностей с блеском",
+  "КОЛА": "Сладкий газированный напиток",
+  "ШАЛ": "Шалость, озорство, проказа",
+  "ДОМ": "Здание для жилья",
+  "КОД": "Набор символов для шифрования или программа",
+  "КОМ": "Кусок, слепленный из чего-либо мягкого",
+  "МОК": "Мокрый, влажный (краткая форма прилагательного)",
+  "ДОК": "Сооружение для ремонта и постройки кораблей",
+  "ДОМИК": "Маленький дом, уютное жилище",
+  "РАК": "Водное животное с клешнями или знак зодиака",
+  "АРТ": "Искусство, творчество (от англ. art)",
+  "ТАРА": "Упаковка для товаров: ящики, коробки, бутылки",
+  "КАРТА": "Чертёж местности или игральная карта",
+  "АРКА": "Изогнутое перекрытие проёма в стене",
+  "ТРАК": "Широкая грунтовая дорога, путь",
+  "РОВ": "Глубокая яма с водой вокруг крепости",
+  "ВАР": "Густая смолистая масса, полученная при варке",
+  "КОРОВА": "Домашнее животное, дающее молоко",
+  "ВОР": "Человек, который тайно крадёт чужое",
+  "ОКО": "Глаз (устаревшее, поэтическое слово)",
+  "САМ": "Лично, собственной персоной",
+  "МАК": "Цветок с яркими красными лепестками",
+  "МАСКА": "Накладка на лицо для скрытия внешности или защиты",
+  "КАМА": "Большая река в России, приток Волги",
+  "АКС": "Восклицание неодобрения (от фр. axe)",
+  "МОЛ": "Волнорез, дамба в порту для защиты судов",
+  "ЛОМ": "Тяжёлый металлический стержень для разлома",
+  "МОЛОКО": "Белый питательный напиток от коровы",
+  "РАД": "Испытывающий радость, довольный",
+  "ДАР": "Подарок, пожертвование",
+  "РОД": "Семья, поколение, племя",
+  "ИОД": "Химический элемент, антисептик коричневого цвета",
+  "ДИО": "Приставка, означающая 'божественный' (от греч. dios)"
+};
 
 // --- УТИЛИТЫ ---
 function canFormWord(availableLetters: string, word: string): boolean {
@@ -82,6 +121,8 @@ export default function App() {
   const [revealedLengths, setRevealedLengths] = useState<string[]>([]);
   const [shakeWord, setShakeWord] = useState(false);
   const [hintTiles, setHintTiles] = useState<number[]>([]);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
   
   const messageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -187,6 +228,7 @@ export default function App() {
       return;
     }
 
+    // Проверяем, найдено ли уже это слово
     if (found.includes(word)) {
       showMessage('Это слово уже найдено!', 'error');
       return;
@@ -199,6 +241,8 @@ export default function App() {
 
     if (valid.includes(word)) {
       // Правильное слово
+      const newFoundCount = found.length + 1;
+      
       setFoundWords(prev => {
         const newFound = [...prev, word];
         // Проверяем победу
@@ -225,7 +269,8 @@ export default function App() {
       setScore(prev => prev + points);
       showMessage(`+${points} очков! ${currentStreak > 1 ? `🔥 Серия x${currentStreak}` : ''}`, 'success');
       
-      if (foundWords.length + 1 < valid.length) {
+      // Очищаем поле, если это не последнее слово
+      if (newFoundCount < valid.length) {
         setTimeout(clearWord, 600);
       }
     } else {
@@ -233,7 +278,7 @@ export default function App() {
       showMessage('Такого слова нет в списке!', 'error');
       setTimeout(clearWord, 600);
     }
-  }, [currentLevelIndex, showMessage, clearWord, revealedFirstLetters, revealedLengths, foundWords.length]);
+  }, [currentLevelIndex, showMessage, clearWord, revealedFirstLetters, revealedLengths]);
 
   // Обработка клавиатуры
   useEffect(() => {
@@ -536,10 +581,12 @@ export default function App() {
             return (
               <div
                 key={idx}
+                onClick={() => isFound && setSelectedWord(word)}
                 className={`bg-white py-2 px-2 rounded-xl text-center font-bold text-sm shadow-[0_2px_5px_rgba(0,0,0,0.05)] transition-all duration-300
-                  ${isFound ? 'text-[#2e7d32] bg-[#e8f5e9] scale-105' : 'text-[#b0bec5]'}
+                  ${isFound ? 'text-[#2e7d32] bg-[#e8f5e9] scale-105 cursor-pointer hover:scale-110 hover:shadow-[0_4px_10px_rgba(0,0,0,0.15)]' : 'text-[#b0bec5]'}
                   ${isFirstLetterRevealed && !isFound ? 'text-[#8e24aa] bg-[#f3e5f5]' : ''}
                 `}
+                title={isFound ? 'Нажми, чтобы узнать значение' : ''}
               >
                 {displayText}
                 {isLengthRevealed && !isFound && !isFirstLetterRevealed && (
@@ -547,6 +594,9 @@ export default function App() {
                 )}
                 {isFirstLetterRevealed && !isFound && (
                   <span className="block text-[0.6rem] text-[#ab47bc] mt-0.5">первая: {word[0]}</span>
+                )}
+                {isFound && (
+                  <span className="block text-[0.5rem] text-[#66bb6a] mt-0.5">📖 значение</span>
                 )}
               </div>
             );
@@ -573,6 +623,10 @@ export default function App() {
               <strong>💡 Подсказки</strong>
               <p className="mt-1 text-sm">3 типа подсказок с разной стоимостью. Если использовал подсказку для слова — очки за него снижаются!</p>
             </div>
+            <div className="bg-white p-4 rounded-2xl shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
+              <strong>📖 Значения слов</strong>
+              <p className="mt-1 text-sm">Нажми на найденное слово в списке, чтобы узнать его значение!</p>
+            </div>
           </div>
         </div>
 
@@ -596,16 +650,67 @@ export default function App() {
       )}
 
       {/* Плавающая кнопка обратной связи */}
-      <a
-        href="https://docs.google.com/forms/d/e/1FAIpQLSfhCus-2jCHuhyRteGpFJ83rW_deEx61DiMZP2dqiTCf-g0Lw/viewform?usp=header"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-[999] flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all duration-300 shadow-[0_6px_20px_rgba(94,53,177,0.3)] bg-gradient-to-r from-[#42a5f5] via-[#5c6bc0] to-[#7e57c2] text-white hover:shadow-[0_8px_30px_rgba(94,53,177,0.5)] hover:-translate-y-1 active:translate-y-0 active:scale-95 no-underline animate-[floatBtn_3s_ease-in-out_infinite]"
+      <button
+        onClick={() => setShowFeedbackModal(true)}
+        className="fixed bottom-6 right-6 z-[999] flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all duration-300 shadow-[0_6px_20px_rgba(94,53,177,0.3)] bg-gradient-to-r from-[#42a5f5] via-[#5c6bc0] to-[#7e57c2] text-white hover:shadow-[0_8px_30px_rgba(94,53,177,0.5)] hover:-translate-y-1 active:translate-y-0 active:scale-95 cursor-pointer animate-[floatBtn_3s_ease-in-out_infinite]"
         title="Обратная связь"
       >
         <span className="text-xl">💬</span>
         <span className="hidden sm:inline">Обратная связь</span>
-      </a>
+      </button>
+
+      {/* Модальное окно обратной связи с iframe */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[1001] p-4">
+          <div className="bg-white rounded-[30px] w-full max-w-[600px] h-[80vh] flex flex-col overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-[popIn_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-[#42a5f5] to-[#7e57c2]">
+              <h3 className="text-white font-bold text-lg m-0">💬 Обратная связь</h3>
+              <button
+                onClick={() => setShowFeedbackModal(false)}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xl transition-colors cursor-pointer border-none"
+              >
+                ×
+              </button>
+            </div>
+            <iframe
+              src="https://docs.google.com/forms/d/e/1FAIpQLSfhCus-2jCHuhyRteGpFJ83rW_deEx61DiMZP2dqiTCf-g0Lw/viewform?embedded=true"
+              className="flex-1 w-full border-none"
+              title="Форма обратной связи"
+            >
+              Загрузка...
+            </iframe>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно значения слова */}
+      {selectedWord && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[1001] p-4"
+          onClick={() => setSelectedWord(null)}
+        >
+          <div 
+            className="bg-white rounded-[30px] p-8 max-w-[400px] w-full shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-[popIn_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="text-5xl mb-4">📖</div>
+              <h3 className="text-[#ef6c00] text-3xl font-black mb-4">{selectedWord}</h3>
+              <div className="bg-gradient-to-br from-[#fff5eb] to-[#ffebee] rounded-2xl p-5 mb-5">
+                <p className="text-[#5d4037] text-lg leading-relaxed m-0">
+                  {wordDefinitions[selectedWord] || 'Определение не найдено'}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedWord(null)}
+                className="px-8 py-3 border-none rounded-full font-bold text-base cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#42a5f5] to-[#1e88e5] text-white"
+              >
+                Понятно ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CSS Animations */}
       <style>{`
