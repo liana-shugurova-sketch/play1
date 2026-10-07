@@ -13,7 +13,7 @@ interface Level {
 }
 
 // --- ДАННЫЕ УРОВНЕЙ ---
-// Все слова простые, бытовые и часто используются в жизни
+// Все слова простые, знакомые и часто используются в жизни
 const gameLevels: Level[] = [
   {
     letters: "ШКОЛА",
@@ -29,19 +29,19 @@ const gameLevels: Level[] = [
   },
   {
     letters: "КОРОВА",
-    words: ["РОВ", "ВАР", "РАК", "КОРОВА", "ВОР", "ОКО"]
+    words: ["РОВ", "ВАР", "РАК", "КОРОВА", "ВОР"]
   },
   {
-    letters: "МАСКА",
-    words: ["САМ", "МАК", "МАСКА", "КАМА", "АКС"]
+    letters: "СЛОН",
+    words: ["СОН", "НОС", "СЛОН", "ЛОНО"]
   },
   {
     letters: "МОЛОКО",
-    words: ["МОЛ", "КОЛ", "ЛОМ", "КОМ", "ОКО", "МОЛОКО"]
+    words: ["МОЛ", "КОЛ", "ЛОМ", "КОМ", "МОЛОКО"]
   },
   {
     letters: "РАДИО",
-    words: ["РАД", "ДАР", "РОД", "ИОД", "ДИО"]
+    words: ["РАД", "ДАР", "РОД", "ИОД"]
   }
 ];
 
@@ -68,20 +68,17 @@ const wordDefinitions: Record<string, string> = {
   "ВАР": "Густая смолистая масса, полученная при варке",
   "КОРОВА": "Домашнее животное, дающее молоко",
   "ВОР": "Человек, который тайно крадёт чужое",
-  "ОКО": "Глаз (устаревшее, поэтическое слово)",
-  "САМ": "Лично, собственной персоной",
-  "МАК": "Цветок с яркими красными лепестками",
-  "МАСКА": "Накладка на лицо для скрытия внешности или защиты",
-  "КАМА": "Большая река в России, приток Волги",
-  "АКС": "Восклицание неодобрения (от фр. axe)",
+  "СОН": "Состояние отдыха организма, когда мы спим",
+  "НОС": "Орган обоняния на лице",
+  "СЛОН": "Крупное животное с хоботом и большими ушами",
+  "ЛОНО": "Внутренняя часть, недра (лоно природы)",
   "МОЛ": "Волнорез, дамба в порту для защиты судов",
   "ЛОМ": "Тяжёлый металлический стержень для разлома",
   "МОЛОКО": "Белый питательный напиток от коровы",
   "РАД": "Испытывающий радость, довольный",
   "ДАР": "Подарок, пожертвование",
   "РОД": "Семья, поколение, племя",
-  "ИОД": "Химический элемент, антисептик коричневого цвета",
-  "ДИО": "Приставка, означающая 'божественный' (от греч. dios)"
+  "ИОД": "Химический элемент, антисептик коричневого цвета"
 };
 
 // --- УТИЛИТЫ ---
@@ -139,6 +136,49 @@ export default function App() {
   useEffect(() => { tilesRef.current = tiles; }, [tiles]);
   useEffect(() => { streakRef.current = streak; }, [streak]);
   useEffect(() => { showWinModalRef.current = showWinModal; }, [showWinModal]);
+  
+  // Обновляем ref сразу после изменения foundWords для синхронной проверки
+  const setFoundWordsAndRef = useCallback((updater: (prev: string[]) => string[]) => {
+    setFoundWords(prev => {
+      const newFound = updater(prev);
+      foundWordsRef.current = newFound;
+      return newFound;
+    });
+  }, []);
+  
+  // Реагируем на изменение foundWords - очистка поля и проверка победы
+  const prevFoundWordsLengthRef = useRef(0);
+  
+  useEffect(() => {
+    // Пропускаем первое срабатывание (загрузка уровня)
+    if (prevFoundWordsLengthRef.current === 0 && foundWords.length === 0) {
+      prevFoundWordsLengthRef.current = 0;
+      return;
+    }
+    
+    // Пропускаем, если длина не увеличилась (сброс уровня)
+    if (foundWords.length <= prevFoundWordsLengthRef.current) {
+      prevFoundWordsLengthRef.current = foundWords.length;
+      return;
+    }
+    
+    prevFoundWordsLengthRef.current = foundWords.length;
+    
+    const valid = validateDictionary(
+      gameLevels[currentLevelIndex].letters,
+      gameLevels[currentLevelIndex].words
+    );
+    
+    // Проверяем победу
+    if (foundWords.length === valid.length) {
+      setTimeout(() => setShowWinModal(true), 800);
+    } else {
+      // Очищаем поле, если это не последнее слово
+      setTimeout(clearWord, 600);
+    }
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [foundWords.length]);
 
   const currentLevel = gameLevels[currentLevelIndex];
   
@@ -167,6 +207,7 @@ export default function App() {
     setMessage('');
     setMessageType('');
     setShowWinModal(false);
+    prevFoundWordsLengthRef.current = 0;
     
     // Обновляем слова уровня на валидные
     gameLevels[currentLevelIndex] = { ...level, words: valid };
@@ -220,17 +261,10 @@ export default function App() {
   const checkWord = useCallback(() => {
     const indices = selectedIndicesRef.current;
     const currentTiles = tilesRef.current;
-    const found = foundWordsRef.current;
     const word = indices.map(i => currentTiles[i].letter).join('');
     
     if (word.length < 3) {
       showMessage('Слово слишком короткое! (мин. 3 буквы)', 'error');
-      return;
-    }
-
-    // Проверяем, найдено ли уже это слово
-    if (found.includes(word)) {
-      showMessage('Это слово уже найдено!', 'error');
       return;
     }
 
@@ -240,15 +274,15 @@ export default function App() {
     );
 
     if (valid.includes(word)) {
-      // Правильное слово
-      const newFoundCount = found.length + 1;
-      
-      setFoundWords(prev => {
-        const newFound = [...prev, word];
-        // Проверяем победу
-        if (newFound.length === valid.length) {
-          setTimeout(() => setShowWinModal(true), 800);
+      // Правильное слово - используем функциональное обновление для актуального состояния
+      setFoundWordsAndRef(prev => {
+        // Проверяем внутри обновления, что слова ещё нет
+        if (prev.includes(word)) {
+          showMessage('Это слово уже найдено!', 'error');
+          return prev;
         }
+        
+        const newFound = [...prev, word];
         return newFound;
       });
       
@@ -268,17 +302,12 @@ export default function App() {
 
       setScore(prev => prev + points);
       showMessage(`+${points} очков! ${currentStreak > 1 ? `🔥 Серия x${currentStreak}` : ''}`, 'success');
-      
-      // Очищаем поле, если это не последнее слово
-      if (newFoundCount < valid.length) {
-        setTimeout(clearWord, 600);
-      }
     } else {
       setStreak(0);
       showMessage('Такого слова нет в списке!', 'error');
       setTimeout(clearWord, 600);
     }
-  }, [currentLevelIndex, showMessage, clearWord, revealedFirstLetters, revealedLengths]);
+  }, [currentLevelIndex, showMessage, clearWord, revealedFirstLetters, revealedLengths, setFoundWordsAndRef]);
 
   // Обработка клавиатуры
   useEffect(() => {
@@ -563,7 +592,7 @@ export default function App() {
         </div>
 
         {/* Words List */}
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-2.5 w-full mt-5">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-2.5 w-full mt-5 justify-items-center">
           {validWords.map((word, idx) => {
             const isFound = foundWords.includes(word);
             const isFirstLetterRevealed = revealedFirstLetters.includes(word);
