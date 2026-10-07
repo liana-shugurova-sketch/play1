@@ -130,6 +130,17 @@ export default function App() {
   useEffect(() => { streakRef.current = streak; }, [streak]);
   useEffect(() => { showWinModalRef.current = showWinModal; }, [showWinModal]);
   
+  // Очищаем подсветку при любом изменении выбранных букв
+  useEffect(() => {
+    if (selectedIndices.length > 0) {
+      setHintTiles([]);
+      if (hintTimeoutRef.current) {
+        clearTimeout(hintTimeoutRef.current);
+        hintTimeoutRef.current = null;
+      }
+    }
+  }, [selectedIndices]);
+  
   // Обновляем ref сразу после изменения foundWords для синхронной проверки
   const setFoundWordsAndRef = useCallback((updater: (prev: string[]) => string[]) => {
     setFoundWords(prev => {
@@ -521,21 +532,26 @@ export default function App() {
 
         {/* Tiles */}
         <div className="flex flex-wrap justify-center gap-4 mb-8 max-w-[600px]">
-          {tiles.map((tile, idx) => (
-            <div
-              key={idx}
-              onClick={() => handleTileClick(idx)}
-              className={`w-[60px] h-[60px] rounded-[15px] flex justify-center items-center text-3xl font-black cursor-pointer select-none transition-all duration-100
-                ${tile.used 
-                  ? 'bg-[#eceff1] text-[#b0bec5] shadow-[inset_0_2px_5px_rgba(0,0,0,0.1)] cursor-default' 
-                  : 'bg-white text-[#5d4037] shadow-[0_4px_0_#ffccbc] hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_2px_0_#ffccbc]'
-                }
-                ${hintTiles.includes(idx) ? 'animate-[pulseHint_1s_infinite] bg-[#fff9c4] border-2 border-[#fbc02d]' : ''}
-              `}
-            >
-              {tile.letter}
-            </div>
-          ))}
+          {tiles.map((tile, idx) => {
+            // Подсвечиваем только если плитка НЕ использована И есть в списке подсказки
+            const shouldHighlight = !tile.used && hintTiles.includes(idx);
+            
+            return (
+              <div
+                key={idx}
+                onClick={() => handleTileClick(idx)}
+                className={`w-[60px] h-[60px] rounded-[15px] flex justify-center items-center text-3xl font-black cursor-pointer select-none transition-all duration-100
+                  ${tile.used 
+                    ? 'bg-[#eceff1] text-[#b0bec5] shadow-[inset_0_2px_5px_rgba(0,0,0,0.1)] cursor-default' 
+                    : 'bg-white text-[#5d4037] shadow-[0_4px_0_#ffccbc] hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_2px_0_#ffccbc]'
+                  }
+                  ${shouldHighlight ? 'animate-[pulseHint_1s_infinite] bg-[#fff9c4] border-2 border-[#fbc02d]' : ''}
+                `}
+              >
+                {tile.letter}
+              </div>
+            );
+          })}
         </div>
 
         {/* Controls */}
