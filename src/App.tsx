@@ -127,6 +127,7 @@ export default function App() {
   const streakRef = useRef(streak);
   const showWinModalRef = useRef(showWinModal);
   const scoreRef = useRef(score);
+  const currentLevelIndexRef = useRef(currentLevelIndex);
   
   // Обновляем refs при каждом рендере
   useEffect(() => {
@@ -136,6 +137,7 @@ export default function App() {
     streakRef.current = streak;
     showWinModalRef.current = showWinModal;
     scoreRef.current = score;
+    currentLevelIndexRef.current = currentLevelIndex;
   });
 
   const currentLevel = gameLevels[currentLevelIndex];
@@ -465,7 +467,7 @@ export default function App() {
       
       if (showWinModalRef.current) {
         if (e.key === 'Enter') {
-          if (currentLevelIndex >= gameLevels.length - 1) {
+          if (currentLevelIndexRef.current >= gameLevels.length - 1) {
             setCurrentLevelIndex(0);
             setScore(0);
           } else {
@@ -508,8 +510,8 @@ export default function App() {
         }
 
         const currentValidWords = validateDictionary(
-          gameLevels[currentLevelIndex].letters,
-          gameLevels[currentLevelIndex].words
+          gameLevels[currentLevelIndexRef.current].letters,
+          gameLevels[currentLevelIndexRef.current].words
         );
 
         if (currentValidWords.includes(word)) {
