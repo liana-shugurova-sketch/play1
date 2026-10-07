@@ -124,6 +124,16 @@ export default function App() {
     const level = gameLevels[currentLevelIndex];
     const valid = validateDictionary(level.letters, level.words);
     
+    // Отменяем все таймеры при переходе на новый уровень
+    if (clearTimerRef.current) {
+      clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = null;
+    }
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
+    }
+    
     const newTiles: Tile[] = level.letters.split('').map((letter, index) => ({
       letter,
       used: false,
@@ -148,6 +158,7 @@ export default function App() {
     // Отменяем предыдущий таймер сообщения
     if (messageTimerRef.current) {
       clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
     }
     
     setMessage(text);
