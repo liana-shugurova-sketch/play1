@@ -160,11 +160,27 @@ export default function App() {
   };
 
   const clearWord = () => {
+    // Отменяем все таймеры
+    if (clearTimerRef.current) {
+      clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = null;
+    }
+    if (hintTimerRef.current) {
+      clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = null;
+    }
+    
     setTiles(prev => prev.map(t => ({ ...t, used: false })));
     setSelectedIndices([]);
     setHintTiles([]);
     setMessage('');
     setMessageType('');
+  };
+
+  // Очищает только выбор, НЕ трогает подсветку
+  const clearSelection = () => {
+    setTiles(prev => prev.map(t => ({ ...t, used: false })));
+    setSelectedIndices([]);
   };
 
   const handleTileClick = (index: number) => {
@@ -184,7 +200,7 @@ export default function App() {
     
     setTiles(prev => prev.map((t, i) => i === index ? { ...t, used: true } : t));
     setSelectedIndices(prev => [...prev, index]);
-    setHintTiles([]);
+    // НЕ сбрасываем hintTiles здесь, так как условие подсветки уже проверяет selectedIndices.length === 0
     setMessage('');
     setMessageType('');
   };
@@ -199,8 +215,7 @@ export default function App() {
   const checkWord = () => {
     const word = selectedIndices.map(i => tiles[i].letter).join('');
     
-    // Очищаем подсветку и отменяем таймер подсветки
-    setHintTiles([]);
+    // Отменяем таймер подсветки
     if (hintTimerRef.current) {
       clearTimeout(hintTimerRef.current);
       hintTimerRef.current = null;
@@ -253,7 +268,7 @@ export default function App() {
           clearTimeout(clearTimerRef.current);
         }
         clearTimerRef.current = setTimeout(() => {
-          clearWord();
+          clearSelection();
           clearTimerRef.current = null;
         }, 600);
       }
@@ -381,8 +396,8 @@ export default function App() {
       }
     });
     
-    // Очищаем поле
-    clearWord();
+    // Очищаем только выбор, НЕ трогаем подсветку
+    clearSelection();
     
     if (tileIndices.length > 0) {
       // Отменяем старый таймер, если он есть
@@ -480,7 +495,8 @@ export default function App() {
         {/* Tiles */}
         <div className="flex flex-wrap justify-center gap-4 mb-8 max-w-[600px]">
           {tiles.map((tile, idx) => {
-            const shouldHighlight = !tile.used && hintTiles.includes(idx);
+            // Подсвечиваем только если плитка не использована, есть в списке подсказки И поле пустое
+            const shouldHighlight = !tile.used && hintTiles.includes(idx) && selectedIndices.length === 0;
             
             return (
               <div
