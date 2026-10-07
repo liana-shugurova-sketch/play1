@@ -535,8 +535,11 @@ export default function App() {
         {/* Tiles */}
         <div className="flex flex-wrap justify-center gap-4 mb-8 max-w-[600px]">
           {tiles.map((tile, idx) => {
-            // Подсвечиваем только если плитка НЕ использована И есть в списке подсказки
-            const shouldHighlight = !tile.used && hintTiles.includes(idx);
+            // Подсвечиваем ТОЛЬКО если:
+            // 1. Плитка НЕ использована
+            // 2. Плитка есть в списке подсказки
+            // 3. Поле пустое (нет выбранных букв)
+            const shouldHighlight = !tile.used && hintTiles.includes(idx) && selectedIndices.length === 0;
             
             return (
               <div
