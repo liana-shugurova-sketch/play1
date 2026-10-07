@@ -366,6 +366,10 @@ export default function App() {
 
   // Подсказка 1: Показать первую букву (-10 очков)
   const hintFirstLetter = useCallback(() => {
+    if (score < 10) {
+      showMessage('Недостаточно очков! Нужно минимум 10 ⚠️', 'error');
+      return;
+    }
     const remaining = getRemainingWords();
     if (remaining.length === 0) return;
     
@@ -387,10 +391,14 @@ export default function App() {
     setRevealedFirstLetters(prev => [...prev, targetWord]);
     setScore(prev => Math.max(0, prev - 10));
     showMessage(`💡 Первая буква слова из ${targetWord.length} букв: «${targetWord[0]}_» (-10 очков)`, 'hint');
-  }, [getRemainingWords, revealedFirstLetters, showMessage]);
+  }, [getRemainingWords, revealedFirstLetters, showMessage, score]);
 
   // Подсказка 2: Показать длину слова (-5 очков)
   const hintWordLength = useCallback(() => {
+    if (score < 5) {
+      showMessage('Недостаточно очков! Нужно минимум 5 ⚠️', 'error');
+      return;
+    }
     const remaining = getRemainingWords();
     if (remaining.length === 0) return;
     
@@ -413,10 +421,14 @@ export default function App() {
     setRevealedLengths(prev => [...prev, targetWord]);
     setScore(prev => Math.max(0, prev - 5));
     showMessage(`💡 Есть слово из ${targetWord.length} букв (-5 очков)`, 'hint');
-  }, [getRemainingWords, revealedLengths, showMessage]);
+  }, [getRemainingWords, revealedLengths, showMessage, score]);
 
   // Подсказка 3: Подсветить плитки (-15 очков)
   const hintHighlightTiles = useCallback(() => {
+    if (score < 15) {
+      showMessage('Недостаточно очков! Нужно минимум 15 ⚠️', 'error');
+      return;
+    }
     const remaining = getRemainingWords();
     if (remaining.length === 0) return;
     
@@ -454,7 +466,7 @@ export default function App() {
         hintTimeoutRef.current = null;
       }, 3000);
     }
-  }, [getRemainingWords, showMessage]);
+  }, [getRemainingWords, showMessage, score]);
 
   const nextLevel = useCallback(() => {
     if (currentLevelIndex >= gameLevels.length - 1) {
