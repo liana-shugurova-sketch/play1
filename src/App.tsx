@@ -299,33 +299,7 @@ export default function App() {
     }
   };
 
-  // Обработка клавиатуры
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (showWinModal) {
-        if (e.key === 'Enter') nextLevel();
-        return;
-      }
 
-      const key = e.key.toUpperCase();
-      
-      if (e.key === 'Enter') {
-        checkWord();
-      } else if (e.key === 'Backspace') {
-        removeLastLetter();
-      } else if (e.key === 'Escape') {
-        clearWord();
-      } else if (/^[А-ЯЁ]$/.test(key)) {
-        const tileIndex = tiles.findIndex(t => !t.used && t.letter === key);
-        if (tileIndex !== -1) {
-          handleTileClick(tileIndex);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tiles, selectedIndices, foundWords, streak, showWinModal]);
 
   // --- ПОДСКАЗКИ ---
   
@@ -409,6 +383,34 @@ export default function App() {
       setCurrentLevelIndex(prev => prev + 1);
     }
   };
+
+  // Обработка клавиатуры
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showWinModal) {
+        if (e.key === 'Enter') nextLevel();
+        return;
+      }
+
+      const key = e.key.toUpperCase();
+      
+      if (e.key === 'Enter') {
+        checkWord();
+      } else if (e.key === 'Backspace') {
+        removeLastLetter();
+      } else if (e.key === 'Escape') {
+        clearWord();
+      } else if (/^[А-ЯЁ]$/.test(key)) {
+        const tileIndex = tiles.findIndex(t => !t.used && t.letter === key);
+        if (tileIndex !== -1) {
+          handleTileClick(tileIndex);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [tiles, selectedIndices, foundWords, streak, showWinModal, checkWord, removeLastLetter, clearWord, handleTileClick, nextLevel]);
 
   const progress = validWords.length > 0 ? (foundWords.length / validWords.length) * 100 : 0;
 
