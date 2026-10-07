@@ -117,6 +117,24 @@ export default function App() {
   // Refs для управления таймерами
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Refs для доступа к актуальным значениям в обработчике клавиатуры
+  const tilesRef = useRef(tiles);
+  const selectedIndicesRef = useRef(selectedIndices);
+  const foundWordsRef = useRef(foundWords);
+  const streakRef = useRef(streak);
+  const showWinModalRef = useRef(showWinModal);
+  const scoreRef = useRef(score);
+  
+  // Обновляем refs при каждом рендере
+  useEffect(() => {
+    tilesRef.current = tiles;
+    selectedIndicesRef.current = selectedIndices;
+    foundWordsRef.current = foundWords;
+    streakRef.current = streak;
+    showWinModalRef.current = showWinModal;
+    scoreRef.current = score;
+  });
 
   const currentLevel = gameLevels[currentLevelIndex];
   const validWords = validateDictionary(currentLevel.letters, currentLevel.words);
@@ -157,7 +175,7 @@ export default function App() {
     gameLevels[currentLevelIndex] = { ...level, words: valid };
   }, [currentLevelIndex]);
 
-  const showMessage = (text: string, type: 'success' | 'error' | 'hint') => {
+  const showMessage = useCallback((text: string, type: 'success' | 'error' | 'hint') => {
     // Отменяем предыдущий таймер сообщения
     if (messageTimerRef.current) {
       clearTimeout(messageTimerRef.current);
@@ -177,9 +195,9 @@ export default function App() {
       setMessageType('');
       messageTimerRef.current = null;
     }, 3000);
-  };
+  }, []);
 
-  const clearWord = () => {
+  const clearWord = useCallback(() => {
     // Отменяем все таймеры
     if (clearTimerRef.current) {
       clearTimeout(clearTimerRef.current);
@@ -197,10 +215,10 @@ export default function App() {
     setSelectedIndices([]);
     setMessage('');
     setMessageType('');
-  };
+  }, []);
 
-  const handleTileClick = (index: number) => {
-    if (tiles[index].used) return;
+  const handleTileClick = useCallback((index: number) => {
+    if (tilesRef.current[index].used) return;
     
     // Отменяем таймер очистки поля, если пользователь начал вводить новое слово
     if (clearTimerRef.current) {
@@ -221,11 +239,12 @@ export default function App() {
     setSelectedIndices(prev => [...prev, index]);
     setMessage('');
     setMessageType('');
-  };
+  }, []);
 
-  const removeLastLetter = () => {
-    if (selectedIndices.length === 0) return;
-    const lastIdx = selectedIndices[selectedIndices.length - 1];
+  const removeLastLetter = useCallback(() => {
+    const indices = selectedIndicesRef.current;
+    if (indices.length === 0) return;
+    const lastIdx = indices[indices.length - 1];
     
     // Отменяем таймер сообщения подсказки
     if (messageTimerRef.current) {
@@ -240,10 +259,12 @@ export default function App() {
     setSelectedIndices(prev => prev.slice(0, -1));
     setMessage('');
     setMessageType('');
-  };
+  }, []);
 
-  const checkWord = () => {
-    const word = selectedIndices.map(i => tiles[i].letter).join('');
+  const checkWord = useCallback(() => {
+    const indices = selectedIndicesRef.current;
+    const currentTiles = tilesRef.current;
+    const word = indices.map(i => currentTiles[i].letter).join('');
     
     // Отменяем таймер очистки поля перед проверкой
     if (clearTimerRef.current) {
@@ -269,17 +290,24 @@ export default function App() {
     }
 
     // Проверяем, найдено ли уже это слово
-    if (foundWords.includes(word)) {
+    const currentFoundWords = foundWordsRef.current;
+    if (currentFoundWords.includes(word)) {
       showMessage('Это слово уже найдено!', 'error');
       return;
     }
 
-    if (validWords.includes(word)) {
+    const currentValidWords = validateDictionary(
+      gameLevels[currentLevelIndex].letters,
+      gameLevels[currentLevelIndex].words
+    );
+
+    if (currentValidWords.includes(word)) {
       // Правильное слово
-      const newFoundWords = [...foundWords, word];
+      const newFoundWords = [...currentFoundWords, word];
       setFoundWords(newFoundWords);
       
-      const newStreak = streak + 1;
+      const currentStreak = streakRef.current;
+      const newStreak = currentStreak + 1;
       setStreak(newStreak);
       
       let points = 10 + (word.length * 2);
@@ -296,7 +324,7 @@ export default function App() {
       showMessage(`+${points} очков! ${newStreak > 1 ? `🔥 Серия x${newStreak}` : ''}`, 'success');
       
       // Проверяем победу
-      if (newFoundWords.length === validWords.length) {
+      if (newFoundWords.length === currentValidWords.length) {
         setTimeout(() => setShowWinModal(true), 800);
       } else {
         // Сохраняем таймер очистки поля в ref
@@ -313,22 +341,23 @@ export default function App() {
       showMessage('Такого слова нет в списке!', 'error');
       setTimeout(clearWord, 600);
     }
-  };
+  }, [currentLevelIndex, revealedFirstLetters, revealedLengths, clearWord]);
 
 
 
   // --- ПОДСКАЗКИ ---
   
-  const getRemainingWords = () => {
-    return validWords.filter(w => !foundWords.includes(w));
-  };
-
-  const hintFirstLetter = () => {
-    if (score < 10) {
+  const hintFirstLetter = useCallback(() => {
+    if (scoreRef.current < 10) {
       showMessage('Недостаточно очков! Нужно минимум 10 ⚠️', 'error');
       return;
     }
-    const remaining = getRemainingWords();
+    const currentFoundWords = foundWordsRef.current;
+    const currentValidWords = validateDictionary(
+      gameLevels[currentLevelIndex].letters,
+      gameLevels[currentLevelIndex].words
+    );
+    const remaining = currentValidWords.filter(w => !currentFoundWords.includes(w));
     if (remaining.length === 0) return;
     
     const sorted = [...remaining].sort((a, b) => b.length - a.length);
@@ -347,14 +376,19 @@ export default function App() {
     setRevealedFirstLetters(prev => [...prev, targetWord]);
     setScore(prev => Math.max(0, prev - 10));
     showMessage(`💡 Первая буква слова из ${targetWord.length} букв: «${targetWord[0]}_» (-10 очков)`, 'hint');
-  };
+  }, [currentLevelIndex, revealedFirstLetters, showMessage]);
 
-  const hintWordLength = () => {
-    if (score < 5) {
+  const hintWordLength = useCallback(() => {
+    if (scoreRef.current < 5) {
       showMessage('Недостаточно очков! Нужно минимум 5 ⚠️', 'error');
       return;
     }
-    const remaining = getRemainingWords();
+    const currentFoundWords = foundWordsRef.current;
+    const currentValidWords = validateDictionary(
+      gameLevels[currentLevelIndex].letters,
+      gameLevels[currentLevelIndex].words
+    );
+    const remaining = currentValidWords.filter(w => !currentFoundWords.includes(w));
     if (remaining.length === 0) return;
     
     const unrevealed = remaining.filter(w => !revealedLengths.includes(w));
@@ -375,14 +409,19 @@ export default function App() {
     setRevealedLengths(prev => [...prev, targetWord]);
     setScore(prev => Math.max(0, prev - 5));
     showMessage(`💡 Есть слово из ${targetWord.length} букв (-5 очков)`, 'hint');
-  };
+  }, [currentLevelIndex, revealedLengths, showMessage]);
 
-  const hintShowWord = () => {
-    if (score < 15) {
+  const hintShowWord = useCallback(() => {
+    if (scoreRef.current < 15) {
       showMessage('Недостаточно очков! Нужно минимум 15 ⚠️', 'error');
       return;
     }
-    const remaining = getRemainingWords();
+    const currentFoundWords = foundWordsRef.current;
+    const currentValidWords = validateDictionary(
+      gameLevels[currentLevelIndex].letters,
+      gameLevels[currentLevelIndex].words
+    );
+    const remaining = currentValidWords.filter(w => !currentFoundWords.includes(w));
     if (remaining.length === 0) return;
     
     const targetWord = remaining[Math.floor(Math.random() * remaining.length)];
@@ -390,22 +429,24 @@ export default function App() {
     setScore(prev => Math.max(0, prev - 15));
     // Устанавливаем отдельное состояние подсказки
     setHintWordValue(targetWord);
-  };
+  }, [currentLevelIndex, showMessage]);
 
-  const nextLevel = () => {
+  const nextLevel = useCallback(() => {
     if (currentLevelIndex >= gameLevels.length - 1) {
       setCurrentLevelIndex(0);
       setScore(0);
     } else {
       setCurrentLevelIndex(prev => prev + 1);
     }
-  };
+  }, [currentLevelIndex]);
 
-  // Обработка клавиатуры
+  // Обработка клавиатуры - ОДИН обработчик без зависимостей
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (showWinModal) {
-        if (e.key === 'Enter') nextLevel();
+      if (showWinModalRef.current) {
+        if (e.key === 'Enter') {
+          nextLevel();
+        }
         return;
       }
 
@@ -418,7 +459,8 @@ export default function App() {
       } else if (e.key === 'Escape') {
         clearWord();
       } else if (/^[А-ЯЁ]$/.test(key)) {
-        const tileIndex = tiles.findIndex(t => !t.used && t.letter === key);
+        const currentTiles = tilesRef.current;
+        const tileIndex = currentTiles.findIndex(t => !t.used && t.letter === key);
         if (tileIndex !== -1) {
           handleTileClick(tileIndex);
         }
@@ -427,7 +469,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tiles, selectedIndices, foundWords, streak, showWinModal, score]);
+  }, [checkWord, removeLastLetter, clearWord, handleTileClick, nextLevel]);
 
   const progress = validWords.length > 0 ? (foundWords.length / validWords.length) * 100 : 0;
 
