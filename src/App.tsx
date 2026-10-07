@@ -111,8 +111,9 @@ export default function App() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [showDefinitionsModal, setShowDefinitionsModal] = useState(false);
-  // Отдельное состояние для подсказки "Слово" - не связано с showMessage
-  const [hintWordValue, setHintWordValue] = useState<string | null>(null);
+  // Модальное окно для подсказки "Слово"
+  const [showHintModal, setShowHintModal] = useState(false);
+  const [hintWordValue, setHintWordValue] = useState<string>('');
 
   // Refs для управления таймерами
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -170,7 +171,7 @@ export default function App() {
     setMessageType('');
     setShowWinModal(false);
     setShowDefinitionsModal(false);
-    setHintWordValue(null);
+    setShowHintModal(false);
     
     gameLevels[currentLevelIndex] = { ...level, words: valid };
   }, [currentLevelIndex]);
@@ -208,8 +209,8 @@ export default function App() {
       messageTimerRef.current = null;
     }
     
-    // Сбрасываем подсказку "Слово"
-    setHintWordValue(null);
+    // Закрываем модальное окно подсказки
+    setShowHintModal(false);
     
     setTiles(prev => prev.map(t => ({ ...t, used: false })));
     setSelectedIndices([]);
@@ -232,8 +233,8 @@ export default function App() {
       messageTimerRef.current = null;
     }
     
-    // Сбрасываем подсказку "Слово"
-    setHintWordValue(null);
+    // Закрываем модальное окно подсказки
+    setShowHintModal(false);
     
     setTiles(prev => prev.map((t, i) => i === index ? { ...t, used: true } : t));
     setSelectedIndices(prev => [...prev, index]);
@@ -252,8 +253,8 @@ export default function App() {
       messageTimerRef.current = null;
     }
     
-    // Сбрасываем подсказку "Слово"
-    setHintWordValue(null);
+    // Закрываем модальное окно подсказки
+    setShowHintModal(false);
     
     setTiles(prev => prev.map((tile, i) => i === lastIdx ? { ...tile, used: false } : tile));
     setSelectedIndices(prev => prev.slice(0, -1));
@@ -278,8 +279,8 @@ export default function App() {
       messageTimerRef.current = null;
     }
     
-    // Сбрасываем подсказку "Слово"
-    setHintWordValue(null);
+    // Закрываем модальное окно подсказки
+    setShowHintModal(false);
     
     setMessage('');
     setMessageType('');
@@ -427,8 +428,9 @@ export default function App() {
     const targetWord = remaining[Math.floor(Math.random() * remaining.length)];
     
     setScore(prev => Math.max(0, prev - 15));
-    // Устанавливаем отдельное состояние подсказки
+    // Показываем модальное окно с подсказкой
     setHintWordValue(targetWord);
+    setShowHintModal(true);
   }, [currentLevelIndex, showMessage]);
 
   const nextLevel = useCallback(() => {
@@ -443,8 +445,8 @@ export default function App() {
   // Обработка клавиатуры - ОДИН обработчик, создаётся ТОЛЬКО ОДИН РАЗ
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Сбрасываем подсказку "Слово" при любом действии
-      setHintWordValue(null);
+      // Закрываем модальное окно подсказки при любом действии
+      setShowHintModal(false);
       
       if (showWinModalRef.current) {
         if (e.key === 'Enter') {
@@ -640,10 +642,25 @@ export default function App() {
           {message || '\u00A0'}
         </div>
 
-        {/* Подсказка "Слово" - отдельный блок */}
-        {hintWordValue && (
-          <div className="mb-3 px-6 py-3 bg-gradient-to-r from-[#f3e5f5] to-[#e1bee7] rounded-2xl text-center font-bold text-[#8e24aa] text-lg shadow-[0_4px_10px_rgba(142,36,170,0.2)] animate-[popIn_0.3s_cubic-bezier(0.175,0.885,0.32,1.275)]">
-            ✨ Слово: <span className="text-[#6a1b9a]">{hintWordValue}</span>
+        {/* Модальное окно подсказки "Слово" */}
+        {showHintModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[1001] p-4">
+            <div className="bg-white rounded-[30px] p-8 max-w-[400px] w-full shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-[popIn_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+              <div className="text-center">
+                <div className="text-5xl mb-4">✨</div>
+                <h3 className="text-[#8e24aa] text-2xl font-bold mb-4">Подсказка</h3>
+                <div className="bg-gradient-to-br from-[#f3e5f5] to-[#e1bee7] rounded-2xl p-6 mb-5">
+                  <p className="text-[#5d4037] text-lg mb-2">Слово:</p>
+                  <p className="text-[#6a1b9a] text-3xl font-black">{hintWordValue}</p>
+                </div>
+                <button
+                  onClick={() => setShowHintModal(false)}
+                  className="px-8 py-3 border-none rounded-full font-bold text-base cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#ab47bc] to-[#8e24aa] text-white"
+                >
+                  Понятно ✓
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
