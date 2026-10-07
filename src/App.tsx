@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 // --- ТИПЫ ---
 interface Tile {
@@ -111,9 +111,10 @@ export default function App() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [showDefinitionsModal, setShowDefinitionsModal] = useState(false);
-  // Модальное окно для подсказки "Слово"
+  // Универсальное модальное окно для всех подсказок
   const [showHintModal, setShowHintModal] = useState(false);
-  const [hintWordValue, setHintWordValue] = useState<string>('');
+  const [hintType, setHintType] = useState<'word' | 'letter' | 'length'>('word');
+  const [hintContent, setHintContent] = useState<string>('');
 
   // Refs для управления таймерами
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,7 +139,11 @@ export default function App() {
   });
 
   const currentLevel = gameLevels[currentLevelIndex];
-  const validWords = validateDictionary(currentLevel.letters, currentLevel.words);
+  
+  // Используем useMemo для стабильной валидации без мутации глобальных данных
+  const validWords = useMemo(() => {
+    return validateDictionary(currentLevel.letters, currentLevel.words);
+  }, [currentLevel.letters, currentLevel.words.join(',')]);
 
   // Инициализация уровня
   useEffect(() => {
@@ -172,8 +177,6 @@ export default function App() {
     setShowWinModal(false);
     setShowDefinitionsModal(false);
     setShowHintModal(false);
-    
-    gameLevels[currentLevelIndex] = { ...level, words: valid };
   }, [currentLevelIndex]);
 
   const showMessage = useCallback((text: string, type: 'success' | 'error' | 'hint') => {
@@ -376,7 +379,11 @@ export default function App() {
     
     setRevealedFirstLetters(prev => [...prev, targetWord]);
     setScore(prev => Math.max(0, prev - 10));
-    showMessage(`💡 Первая буква слова из ${targetWord.length} букв: «${targetWord[0]}_» (-10 очков)`, 'hint');
+    
+    // Показываем модальное окно с первой буквой
+    setHintType('letter');
+    setHintContent(`${targetWord[0]}${'•'.repeat(targetWord.length - 1)}`);
+    setShowHintModal(true);
   }, [currentLevelIndex, revealedFirstLetters, showMessage]);
 
   const hintWordLength = useCallback(() => {
@@ -400,7 +407,9 @@ export default function App() {
       if (other) {
         setRevealedLengths(prev => [...prev, other]);
         setScore(prev => Math.max(0, prev - 5));
-        showMessage(`💡 Есть слово из ${other.length} букв (-5 очков)`, 'hint');
+        setHintType('length');
+        setHintContent(`${other.length} букв`);
+        setShowHintModal(true);
         return;
       }
       showMessage('Длины всех слов уже показаны!', 'hint');
@@ -409,7 +418,11 @@ export default function App() {
     
     setRevealedLengths(prev => [...prev, targetWord]);
     setScore(prev => Math.max(0, prev - 5));
-    showMessage(`💡 Есть слово из ${targetWord.length} букв (-5 очков)`, 'hint');
+    
+    // Показываем модальное окно с длиной слова
+    setHintType('length');
+    setHintContent(`${targetWord.length} букв`);
+    setShowHintModal(true);
   }, [currentLevelIndex, revealedLengths, showMessage]);
 
   const hintShowWord = useCallback(() => {
@@ -428,8 +441,10 @@ export default function App() {
     const targetWord = remaining[Math.floor(Math.random() * remaining.length)];
     
     setScore(prev => Math.max(0, prev - 15));
-    // Показываем модальное окно с подсказкой
-    setHintWordValue(targetWord);
+    
+    // Показываем модальное окно с полным словом
+    setHintType('word');
+    setHintContent(targetWord);
     setShowHintModal(true);
   }, [currentLevelIndex, showMessage]);
 
@@ -642,16 +657,36 @@ export default function App() {
           {message || '\u00A0'}
         </div>
 
-        {/* Модальное окно подсказки "Слово" */}
+        {/* Универсальное модальное окно для всех подсказок */}
         {showHintModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[1001] p-4">
             <div className="bg-white rounded-[30px] p-8 max-w-[400px] w-full shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-[popIn_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]">
               <div className="text-center">
-                <div className="text-5xl mb-4">✨</div>
-                <h3 className="text-[#8e24aa] text-2xl font-bold mb-4">Подсказка</h3>
+                <div className="text-5xl mb-4">
+                  {hintType === 'word' ? '✨' : hintType === 'letter' ? '💡' : '🔢'}
+                </div>
+                <h3 className="text-[#8e24aa] text-2xl font-bold mb-4">
+                  {hintType === 'word' ? 'Подсказка: Слово' : hintType === 'letter' ? 'Подсказка: Первая буква' : 'Подсказка: Длина слова'}
+                </h3>
                 <div className="bg-gradient-to-br from-[#f3e5f5] to-[#e1bee7] rounded-2xl p-6 mb-5">
-                  <p className="text-[#5d4037] text-lg mb-2">Слово:</p>
-                  <p className="text-[#6a1b9a] text-3xl font-black">{hintWordValue}</p>
+                  {hintType === 'word' && (
+                    <>
+                      <p className="text-[#5d4037] text-lg mb-2">Слово:</p>
+                      <p className="text-[#6a1b9a] text-3xl font-black">{hintContent}</p>
+                    </>
+                  )}
+                  {hintType === 'letter' && (
+                    <>
+                      <p className="text-[#5d4037] text-lg mb-2">Первая буква:</p>
+                      <p className="text-[#6a1b9a] text-3xl font-black">{hintContent}</p>
+                    </>
+                  )}
+                  {hintType === 'length' && (
+                    <>
+                      <p className="text-[#5d4037] text-lg mb-2">Длина слова:</p>
+                      <p className="text-[#6a1b9a] text-3xl font-black">{hintContent}</p>
+                    </>
+                  )}
                 </div>
                 <button
                   onClick={() => setShowHintModal(false)}
@@ -766,6 +801,8 @@ export default function App() {
               displayText = word;
             } else if (isFirstLetterRevealed) {
               displayText = word[0] + '•'.repeat(word.length - 1);
+            } else if (isLengthRevealed) {
+              displayText = '•'.repeat(word.length);
             } else {
               displayText = '•'.repeat(word.length);
             }
@@ -773,19 +810,32 @@ export default function App() {
             return (
               <div
                 key={idx}
-                onClick={() => isFound && setSelectedWord(word)}
+                onClick={() => {
+                  if (isFound) {
+                    setSelectedWord(word);
+                  } else if (isFirstLetterRevealed) {
+                    setHintType('letter');
+                    setHintContent(`${word[0]}${'•'.repeat(word.length - 1)}`);
+                    setShowHintModal(true);
+                  } else if (isLengthRevealed) {
+                    setHintType('length');
+                    setHintContent(`${word.length} букв`);
+                    setShowHintModal(true);
+                  }
+                }}
                 className={`bg-white py-2 px-2 rounded-xl text-center font-bold text-sm shadow-[0_2px_5px_rgba(0,0,0,0.05)] transition-all duration-300
                   ${isFound ? 'text-[#2e7d32] bg-[#e8f5e9] scale-105 cursor-pointer hover:scale-110 hover:shadow-[0_4px_10px_rgba(0,0,0,0.15)]' : 'text-[#b0bec5]'}
-                  ${isFirstLetterRevealed && !isFound ? 'text-[#8e24aa] bg-[#f3e5f5]' : ''}
+                  ${isFirstLetterRevealed && !isFound ? 'text-[#8e24aa] bg-[#f3e5f5] cursor-pointer hover:scale-105' : ''}
+                  ${isLengthRevealed && !isFound && !isFirstLetterRevealed ? 'cursor-pointer hover:scale-105' : ''}
                 `}
-                title={isFound ? 'Нажми, чтобы узнать значение' : ''}
+                title={isFound ? 'Нажми, чтобы узнать значение' : isFirstLetterRevealed || isLengthRevealed ? 'Нажми, чтобы увидеть подсказку' : ''}
               >
                 {displayText}
                 {isLengthRevealed && !isFound && !isFirstLetterRevealed && (
-                  <span className="block text-[0.6rem] text-[#7c4dff] mt-0.5">{word.length} букв</span>
+                  <span className="block text-[0.6rem] text-[#7c4dff] mt-0.5">💡 {word.length} букв</span>
                 )}
                 {isFirstLetterRevealed && !isFound && (
-                  <span className="block text-[0.6rem] text-[#ab47bc] mt-0.5">первая: {word[0]}</span>
+                  <span className="block text-[0.6rem] text-[#ab47bc] mt-0.5">💡 первая: {word[0]}</span>
                 )}
                 {isFound && (
                   <span className="block text-[0.5rem] text-[#66bb6a] mt-0.5">📖 значение</span>
