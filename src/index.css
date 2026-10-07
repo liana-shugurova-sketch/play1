@@ -29,3 +29,17 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Убираем чёрные границы у всех кнопок при фокусе/нажатии */
+button:focus,
+button:focus-visible,
+a:focus,
+a:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+button:active {
+  outline: none !important;
+  box-shadow: none !important;
+}

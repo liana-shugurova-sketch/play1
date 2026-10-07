@@ -340,7 +340,7 @@ export default function App() {
     showMessage(`💡 Есть слово из ${targetWord.length} букв (-5 очков)`, 'hint');
   };
 
-  const hintShowFirstLast = () => {
+  const hintShowWord = () => {
     if (score < 15) {
       showMessage('Недостаточно очков! Нужно минимум 15 ⚠️', 'error');
       return;
@@ -349,18 +349,9 @@ export default function App() {
     if (remaining.length === 0) return;
     
     const targetWord = remaining[Math.floor(Math.random() * remaining.length)];
-    const firstLetter = targetWord[0];
-    const lastLetter = targetWord[targetWord.length - 1];
     
     setScore(prev => Math.max(0, prev - 15));
-    
-    if (targetWord.length === 1) {
-      showMessage(`✨ Слово из 1 буквы: ${firstLetter} (-15 очков)`, 'hint');
-    } else if (targetWord.length === 2) {
-      showMessage(`✨ Слово из 2 букв: ${firstLetter}${lastLetter} (-15 очков)`, 'hint');
-    } else {
-      showMessage(`✨ Слово из ${targetWord.length} букв: ${firstLetter}...${lastLetter} (-15 очков)`, 'hint');
-    }
+    showMessage(`✨ Слово: ${targetWord} (-15 очков)`, 'hint');
   };
 
   const nextLevel = () => {
@@ -485,11 +476,11 @@ export default function App() {
             </button>
             
             <button
-              onClick={hintShowFirstLast}
-              className="px-4 py-3 border-none rounded-full font-bold text-xs cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#e040fb] to-[#aa00ff] text-white relative"
-              title="Показать первую и последнюю букву слова (-15 очков)"
+              onClick={hintShowWord}
+              className="px-4 py-3 border-none rounded-full font-bold text-xs cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#e040fb] to-[#aa00ff] text-white relative outline-none focus:outline-none focus-visible:outline-none"
+              title="Показать полное слово (-15 очков)"
             >
-              ✨ Буквы
+              ✨ Слово
               <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[0.6rem] px-1.5 py-0.5 rounded-full font-bold">-15</span>
             </button>
           </div>
@@ -572,7 +563,7 @@ export default function App() {
             </div>
             <div className="bg-white p-4 rounded-2xl shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
               <strong>💡 Подсказки</strong>
-              <p className="mt-1 text-sm">3 типа подсказок: первая буква (-10), длина слова (-5), первая и последняя буква (-15). Если использовал подсказку — очки за слово снижаются!</p>
+              <p className="mt-1 text-sm">3 типа подсказок: первая буква (-10), длина слова (-5), полное слово (-15). Если использовал подсказку — очки за слово снижаются!</p>
             </div>
             <div className="bg-white p-4 rounded-2xl shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
               <strong>📖 Значения слов</strong>
