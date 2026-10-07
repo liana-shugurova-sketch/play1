@@ -25,7 +25,7 @@ const gameLevels: Level[] = [
   },
   {
     letters: "КАРТА",
-    words: ["РАК", "КАРТА", "АКТ", "КАТ"]
+    words: ["РАК", "КАРТА", "АКТ", "АРТ"]
   },
   {
     letters: "КОРОВА",
@@ -59,7 +59,7 @@ const wordDefinitions: Record<string, string> = {
   "РАК": "Красное животное с клешнями, живёт в воде",
   "КАРТА": "Рисунок земли или игральный лист",
   "АКТ": "Важное действие или документ",
-  "КАТ": "Палач, тот кто исполняет наказание",
+  "АРТ": "Искусство, творчество",
   "КОРОВА": "Большое домашнее животное, даёт молоко",
   "ВОР": "Плохой человек, который крадёт вещи",
   "СОН": "Когда мы спим и видим сны",
@@ -111,6 +111,7 @@ export default function App() {
   const [hintTiles, setHintTiles] = useState<number[]>([]);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const [showDefinitionsModal, setShowDefinitionsModal] = useState(false);
   
   const messageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -198,6 +199,7 @@ export default function App() {
     setMessage('');
     setMessageType('');
     setShowWinModal(false);
+    setShowDefinitionsModal(false);
     prevFoundWordsLengthRef.current = 0;
     
     // Обновляем слова уровня на валидные
@@ -659,11 +661,53 @@ export default function App() {
             <h2 className="text-[#ef6c00] text-2xl font-bold mt-0">Уровень пройден! 🎉</h2>
             <p className="text-xl my-5">Ты нашел все слова!</p>
             <p>Текущий счет: <strong className="text-[#ef6c00] text-2xl">{score}</strong></p>
+            <div className="flex flex-col gap-3 mt-5">
+              <button
+                onClick={() => setShowDefinitionsModal(true)}
+                className="px-8 py-3 border-none rounded-full font-bold text-base cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#ab47bc] to-[#8e24aa] text-white"
+              >
+                📖 Посмотреть значения слов
+              </button>
+              <button
+                onClick={nextLevel}
+                className="px-10 py-4 border-none rounded-full font-bold text-xl cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#42a5f5] to-[#1e88e5] text-white"
+              >
+                {currentLevelIndex >= gameLevels.length - 1 ? '🔄 Начать заново' : 'Следующий уровень →'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Definitions Modal */}
+      {showDefinitionsModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[1001] p-4"
+          onClick={() => setShowDefinitionsModal(false)}
+        >
+          <div 
+            className="bg-white rounded-[30px] p-6 max-w-[500px] w-full max-h-[80vh] overflow-y-auto shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-[popIn_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-2">📖</div>
+              <h3 className="text-[#8e24aa] text-2xl font-bold m-0">Значения слов уровня</h3>
+            </div>
+            <div className="space-y-3">
+              {foundWords.map((word, idx) => (
+                <div key={idx} className="bg-gradient-to-br from-[#fff5eb] to-[#ffebee] rounded-2xl p-4">
+                  <div className="text-[#ef6c00] text-xl font-black mb-1">{word}</div>
+                  <div className="text-[#5d4037] text-sm leading-relaxed">
+                    {wordDefinitions[word] || 'Определение не найдено'}
+                  </div>
+                </div>
+              ))}
+            </div>
             <button
-              onClick={nextLevel}
-              className="mt-5 px-10 py-4 border-none rounded-full font-bold text-xl cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#42a5f5] to-[#1e88e5] text-white"
+              onClick={() => setShowDefinitionsModal(false)}
+              className="w-full mt-5 px-8 py-3 border-none rounded-full font-bold text-base cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#42a5f5] to-[#1e88e5] text-white"
             >
-              {currentLevelIndex >= gameLevels.length - 1 ? '🔄 Начать заново' : 'Следующий уровень →'}
+              Закрыть ✕
             </button>
           </div>
         </div>
