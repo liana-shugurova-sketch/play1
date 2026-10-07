@@ -41,7 +41,7 @@ const gameLevels: Level[] = [
   },
   {
     letters: "РАДИО",
-    words: ["ДАР", "РОД", "ОДА"]
+    words: ["ДАР", "РОД", "ОДА", "РАДИО"]
   }
 ];
 
@@ -69,7 +69,8 @@ const wordDefinitions: Record<string, string> = {
   "МОЛОКО": "Белый напиток от коровы, очень полезный",
   "ДАР": "Подарок, то что дарят",
   "РОД": "Семья, родители и родственники",
-  "ОДА": "Красивое стихотворение в честь кого-то"
+  "ОДА": "Красивое стихотворение в честь кого-то",
+  "РАДИО": "Устройство для прослушивания музыки и новостей"
 };
 
 // --- УТИЛИТЫ ---
@@ -224,6 +225,10 @@ export default function App() {
     setTiles(prev => prev.map(t => ({ ...t, used: false })));
     setSelectedIndices([]);
     setHintTiles([]);
+    if (hintTimeoutRef.current) {
+      clearTimeout(hintTimeoutRef.current);
+      hintTimeoutRef.current = null;
+    }
     setMessage('');
     setMessageType('');
   }, []);
