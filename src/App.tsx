@@ -115,6 +115,13 @@ export default function App() {
   // Refs для управления таймерами
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Refs для функций (чтобы избежать пересоздания обработчика клавиатуры)
+  const checkWordRef = useRef<() => void>(() => {});
+  const removeLastLetterRef = useRef<() => void>(() => {});
+  const clearWordRef = useRef<() => void>(() => {});
+  const handleTileClickRef = useRef<(index: number) => void>(() => {});
+  const nextLevelRef = useRef<() => void>(() => {});
 
   const currentLevel = gameLevels[currentLevelIndex];
   const validWords = validateDictionary(currentLevel.letters, currentLevel.words);
@@ -384,33 +391,42 @@ export default function App() {
     }
   };
 
+  // Обновляем refs функций при каждом рендере
+  useEffect(() => {
+    checkWordRef.current = checkWord;
+    removeLastLetterRef.current = removeLastLetter;
+    clearWordRef.current = clearWord;
+    handleTileClickRef.current = handleTileClick;
+    nextLevelRef.current = nextLevel;
+  }, [checkWord, removeLastLetter, clearWord, handleTileClick, nextLevel]);
+
   // Обработка клавиатуры
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (showWinModal) {
-        if (e.key === 'Enter') nextLevel();
+        if (e.key === 'Enter') nextLevelRef.current();
         return;
       }
 
       const key = e.key.toUpperCase();
       
       if (e.key === 'Enter') {
-        checkWord();
+        checkWordRef.current();
       } else if (e.key === 'Backspace') {
-        removeLastLetter();
+        removeLastLetterRef.current();
       } else if (e.key === 'Escape') {
-        clearWord();
+        clearWordRef.current();
       } else if (/^[А-ЯЁ]$/.test(key)) {
         const tileIndex = tiles.findIndex(t => !t.used && t.letter === key);
         if (tileIndex !== -1) {
-          handleTileClick(tileIndex);
+          handleTileClickRef.current(tileIndex);
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tiles, selectedIndices, foundWords, streak, showWinModal, checkWord, removeLastLetter, clearWord, handleTileClick, nextLevel]);
+  }, [tiles, showWinModal]);
 
   const progress = validWords.length > 0 ? (foundWords.length / validWords.length) * 100 : 0;
 
