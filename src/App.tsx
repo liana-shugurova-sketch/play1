@@ -130,15 +130,6 @@ export default function App() {
   useEffect(() => { streakRef.current = streak; }, [streak]);
   useEffect(() => { showWinModalRef.current = showWinModal; }, [showWinModal]);
   
-  // Очищаем подсветку при любом изменении выбранных букв
-  useEffect(() => {
-    setHintTiles([]);
-    if (hintTimeoutRef.current) {
-      clearTimeout(hintTimeoutRef.current);
-      hintTimeoutRef.current = null;
-    }
-  }, [selectedIndices]);
-  
   // Обновляем ref сразу после изменения foundWords для синхронной проверки
   const setFoundWordsAndRef = useCallback((updater: (prev: string[]) => string[]) => {
     setFoundWords(prev => {
@@ -253,6 +244,10 @@ export default function App() {
       return [...prev, index];
     });
     setHintTiles([]);
+    if (hintTimeoutRef.current) {
+      clearTimeout(hintTimeoutRef.current);
+      hintTimeoutRef.current = null;
+    }
     setMessage('');
     setMessageType('');
   }, []);
@@ -263,6 +258,11 @@ export default function App() {
     const lastIdx = indices[indices.length - 1];
     setTiles(prev => prev.map((tile, i) => i === lastIdx ? { ...tile, used: false } : tile));
     setSelectedIndices(prev => prev.slice(0, -1));
+    setHintTiles([]);
+    if (hintTimeoutRef.current) {
+      clearTimeout(hintTimeoutRef.current);
+      hintTimeoutRef.current = null;
+    }
   }, []);
 
   const checkWord = useCallback(() => {
@@ -432,7 +432,8 @@ export default function App() {
     const tileIndices: number[] = [];
     const usedForHint: Record<string, number> = {};
     
-    tiles.forEach((tile, idx) => {
+    // Используем tilesRef для получения актуальных плиток
+    tilesRef.current.forEach((tile, idx) => {
       if (!tile.used && neededLetters[tile.letter] > 0) {
         const alreadyUsed = usedForHint[tile.letter] || 0;
         if (alreadyUsed < neededLetters[tile.letter]) {
@@ -448,9 +449,12 @@ export default function App() {
       setScore(prev => Math.max(0, prev - 15));
       showMessage(`✨ Подсвечены буквы для слова из ${targetWord.length} букв (-15 очков)`, 'hint');
       
-      hintTimeoutRef.current = setTimeout(() => setHintTiles([]), 3000);
+      hintTimeoutRef.current = setTimeout(() => {
+        setHintTiles([]);
+        hintTimeoutRef.current = null;
+      }, 3000);
     }
-  }, [getRemainingWords, tiles, showMessage]);
+  }, [getRemainingWords, showMessage]);
 
   const nextLevel = useCallback(() => {
     if (currentLevelIndex >= gameLevels.length - 1) {
