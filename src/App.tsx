@@ -108,13 +108,11 @@ export default function App() {
   const [revealedFirstLetters, setRevealedFirstLetters] = useState<string[]>([]);
   const [revealedLengths, setRevealedLengths] = useState<string[]>([]);
   const [shakeWord, setShakeWord] = useState(false);
-  const [hintTiles, setHintTiles] = useState<number[]>([]);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [showDefinitionsModal, setShowDefinitionsModal] = useState(false);
 
   // Refs для управления таймерами
-  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentLevel = gameLevels[currentLevelIndex];
@@ -137,7 +135,6 @@ export default function App() {
     setStreak(0);
     setRevealedFirstLetters([]);
     setRevealedLengths([]);
-    setHintTiles([]);
     setMessage('');
     setMessageType('');
     setShowWinModal(false);
@@ -165,22 +162,11 @@ export default function App() {
       clearTimeout(clearTimerRef.current);
       clearTimerRef.current = null;
     }
-    if (hintTimerRef.current) {
-      clearTimeout(hintTimerRef.current);
-      hintTimerRef.current = null;
-    }
     
     setTiles(prev => prev.map(t => ({ ...t, used: false })));
     setSelectedIndices([]);
-    setHintTiles([]);
     setMessage('');
     setMessageType('');
-  };
-
-  // Очищает только выбор, НЕ трогает подсветку
-  const clearSelection = () => {
-    setTiles(prev => prev.map(t => ({ ...t, used: false })));
-    setSelectedIndices([]);
   };
 
   const handleTileClick = (index: number) => {
@@ -192,15 +178,8 @@ export default function App() {
       clearTimerRef.current = null;
     }
     
-    // Отменяем таймер подсветки
-    if (hintTimerRef.current) {
-      clearTimeout(hintTimerRef.current);
-      hintTimerRef.current = null;
-    }
-    
     setTiles(prev => prev.map((t, i) => i === index ? { ...t, used: true } : t));
     setSelectedIndices(prev => [...prev, index]);
-    // НЕ сбрасываем hintTiles здесь, так как условие подсветки уже проверяет selectedIndices.length === 0
     setMessage('');
     setMessageType('');
   };
@@ -214,12 +193,6 @@ export default function App() {
 
   const checkWord = () => {
     const word = selectedIndices.map(i => tiles[i].letter).join('');
-    
-    // Отменяем таймер подсветки
-    if (hintTimerRef.current) {
-      clearTimeout(hintTimerRef.current);
-      hintTimerRef.current = null;
-    }
     
     // Отменяем таймер очистки поля перед проверкой
     if (clearTimerRef.current) {
@@ -268,7 +241,7 @@ export default function App() {
           clearTimeout(clearTimerRef.current);
         }
         clearTimerRef.current = setTimeout(() => {
-          clearSelection();
+          clearWord();
           clearTimerRef.current = null;
         }, 600);
       }
@@ -367,7 +340,7 @@ export default function App() {
     showMessage(`💡 Есть слово из ${targetWord.length} букв (-5 очков)`, 'hint');
   };
 
-  const hintHighlightTiles = () => {
+  const hintShowFirstLast = () => {
     if (score < 15) {
       showMessage('Недостаточно очков! Нужно минимум 15 ⚠️', 'error');
       return;
@@ -376,44 +349,17 @@ export default function App() {
     if (remaining.length === 0) return;
     
     const targetWord = remaining[Math.floor(Math.random() * remaining.length)];
+    const firstLetter = targetWord[0];
+    const lastLetter = targetWord[targetWord.length - 1];
     
-    const neededLetters: Record<string, number> = {};
-    for (const char of targetWord) {
-      neededLetters[char] = (neededLetters[char] || 0) + 1;
-    }
+    setScore(prev => Math.max(0, prev - 15));
     
-    const tileIndices: number[] = [];
-    const usedForHint: Record<string, number> = {};
-    
-    // Вычисляем плитки на основе ТЕКУЩЕГО состояния (игнорируем used)
-    tiles.forEach((tile, idx) => {
-      if (neededLetters[tile.letter] > 0) {
-        const alreadyUsed = usedForHint[tile.letter] || 0;
-        if (alreadyUsed < neededLetters[tile.letter]) {
-          tileIndices.push(idx);
-          usedForHint[tile.letter] = alreadyUsed + 1;
-        }
-      }
-    });
-    
-    // Очищаем только выбор, НЕ трогаем подсветку
-    clearSelection();
-    
-    if (tileIndices.length > 0) {
-      // Отменяем старый таймер, если он есть
-      if (hintTimerRef.current) {
-        clearTimeout(hintTimerRef.current);
-      }
-      
-      setHintTiles(tileIndices);
-      setScore(prev => Math.max(0, prev - 15));
-      showMessage(`✨ Буквы подсвечены! (-15 очков)`, 'hint');
-      
-      // Сохраняем новый таймер в ref
-      hintTimerRef.current = setTimeout(() => {
-        setHintTiles([]);
-        hintTimerRef.current = null;
-      }, 3000);
+    if (targetWord.length === 1) {
+      showMessage(`✨ Слово из 1 буквы: ${firstLetter} (-15 очков)`, 'hint');
+    } else if (targetWord.length === 2) {
+      showMessage(`✨ Слово из 2 букв: ${firstLetter}${lastLetter} (-15 очков)`, 'hint');
+    } else {
+      showMessage(`✨ Слово из ${targetWord.length} букв: ${firstLetter}...${lastLetter} (-15 очков)`, 'hint');
     }
   };
 
@@ -494,26 +440,20 @@ export default function App() {
 
         {/* Tiles */}
         <div className="flex flex-wrap justify-center gap-4 mb-8 max-w-[600px]">
-          {tiles.map((tile, idx) => {
-            // Подсвечиваем только если плитка не использована, есть в списке подсказки И поле пустое
-            const shouldHighlight = !tile.used && hintTiles.includes(idx) && selectedIndices.length === 0;
-            
-            return (
-              <div
-                key={idx}
-                onClick={() => handleTileClick(idx)}
-                className={`w-[60px] h-[60px] rounded-[15px] flex justify-center items-center text-3xl font-black cursor-pointer select-none transition-all duration-100
-                  ${tile.used 
-                    ? 'bg-[#eceff1] text-[#b0bec5] shadow-[inset_0_2px_5px_rgba(0,0,0,0.1)] cursor-default' 
-                    : 'bg-white text-[#5d4037] shadow-[0_4px_0_#ffccbc] hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_2px_0_#ffccbc]'
-                  }
-                  ${shouldHighlight ? 'animate-[pulseHint_1s_infinite] bg-[#fff9c4] border-2 border-[#fbc02d]' : ''}
-                `}
-              >
-                {tile.letter}
-              </div>
-            );
-          })}
+          {tiles.map((tile, idx) => (
+            <div
+              key={idx}
+              onClick={() => handleTileClick(idx)}
+              className={`w-[60px] h-[60px] rounded-[15px] flex justify-center items-center text-3xl font-black cursor-pointer select-none transition-all duration-100
+                ${tile.used 
+                  ? 'bg-[#eceff1] text-[#b0bec5] shadow-[inset_0_2px_5px_rgba(0,0,0,0.1)] cursor-default' 
+                  : 'bg-white text-[#5d4037] shadow-[0_4px_0_#ffccbc] hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_2px_0_#ffccbc]'
+                }
+              `}
+            >
+              {tile.letter}
+            </div>
+          ))}
         </div>
 
         {/* Controls */}
@@ -545,11 +485,11 @@ export default function App() {
             </button>
             
             <button
-              onClick={hintHighlightTiles}
+              onClick={hintShowFirstLast}
               className="px-4 py-3 border-none rounded-full font-bold text-xs cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#e040fb] to-[#aa00ff] text-white relative"
-              title="Подсветить плитки для составления слова (-15 очков)"
+              title="Показать первую и последнюю букву слова (-15 очков)"
             >
-              ✨ Плитки
+              ✨ Буквы
               <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[0.6rem] px-1.5 py-0.5 rounded-full font-bold">-15</span>
             </button>
           </div>
@@ -632,7 +572,7 @@ export default function App() {
             </div>
             <div className="bg-white p-4 rounded-2xl shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
               <strong>💡 Подсказки</strong>
-              <p className="mt-1 text-sm">3 типа подсказок с разной стоимостью. Если использовал подсказку для слова — очки за него снижаются!</p>
+              <p className="mt-1 text-sm">3 типа подсказок: первая буква (-10), длина слова (-5), первая и последняя буква (-15). Если использовал подсказку — очки за слово снижаются!</p>
             </div>
             <div className="bg-white p-4 rounded-2xl shadow-[0_4px_10px_rgba(0,0,0,0.05)]">
               <strong>📖 Значения слов</strong>
