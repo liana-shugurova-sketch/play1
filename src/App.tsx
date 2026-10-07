@@ -116,6 +116,7 @@ export default function App() {
   
   const messageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearWordTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Refs для актуальных значений в обработчиках
   const selectedIndicesRef = useRef(selectedIndices);
@@ -167,7 +168,11 @@ export default function App() {
       setTimeout(() => setShowWinModal(true), 800);
     } else {
       // Очищаем поле, если это не последнее слово
-      setTimeout(clearWord, 600);
+      // Сохраняем timeout в ref, чтобы можно было отменить
+      clearWordTimeoutRef.current = setTimeout(() => {
+        clearWord();
+        clearWordTimeoutRef.current = null;
+      }, 600);
     }
     
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -189,6 +194,20 @@ export default function App() {
       used: false,
       id: index
     }));
+    
+    // Отменяем все pending таймеры
+    if (clearWordTimeoutRef.current) {
+      clearTimeout(clearWordTimeoutRef.current);
+      clearWordTimeoutRef.current = null;
+    }
+    if (hintTimeoutRef.current) {
+      clearTimeout(hintTimeoutRef.current);
+      hintTimeoutRef.current = null;
+    }
+    if (messageTimeoutRef.current) {
+      clearTimeout(messageTimeoutRef.current);
+      messageTimeoutRef.current = null;
+    }
     
     setTiles(newTiles);
     setSelectedIndices([]);
@@ -222,6 +241,11 @@ export default function App() {
   }, []);
 
   const clearWord = useCallback(() => {
+    // Отменяем pending clearWordTimeout
+    if (clearWordTimeoutRef.current) {
+      clearTimeout(clearWordTimeoutRef.current);
+      clearWordTimeoutRef.current = null;
+    }
     setTiles(prev => prev.map(t => ({ ...t, used: false })));
     setSelectedIndices([]);
     setHintTiles([]);
@@ -236,6 +260,12 @@ export default function App() {
   const handleTileClick = useCallback((index: number) => {
     // Используем ref для проверки актуального состояния
     if (tilesRef.current[index].used) return;
+    
+    // Отменяем pending clearWordTimeout при клике
+    if (clearWordTimeoutRef.current) {
+      clearTimeout(clearWordTimeoutRef.current);
+      clearWordTimeoutRef.current = null;
+    }
     
     setTiles(prev => prev.map((t, i) => i === index ? { ...t, used: true } : t));
     setSelectedIndices(prev => {
@@ -255,6 +285,13 @@ export default function App() {
   const removeLastLetter = useCallback(() => {
     const indices = selectedIndicesRef.current;
     if (indices.length === 0) return;
+    
+    // Отменяем pending clearWordTimeout при удалении буквы
+    if (clearWordTimeoutRef.current) {
+      clearTimeout(clearWordTimeoutRef.current);
+      clearWordTimeoutRef.current = null;
+    }
+    
     const lastIdx = indices[indices.length - 1];
     setTiles(prev => prev.map((tile, i) => i === lastIdx ? { ...tile, used: false } : tile));
     setSelectedIndices(prev => prev.slice(0, -1));
@@ -275,6 +312,11 @@ export default function App() {
     if (hintTimeoutRef.current) {
       clearTimeout(hintTimeoutRef.current);
       hintTimeoutRef.current = null;
+    }
+    // Отменяем pending clearWord
+    if (clearWordTimeoutRef.current) {
+      clearTimeout(clearWordTimeoutRef.current);
+      clearWordTimeoutRef.current = null;
     }
     
     if (word.length < 3) {
@@ -431,6 +473,12 @@ export default function App() {
     }
     const remaining = getRemainingWords();
     if (remaining.length === 0) return;
+    
+    // Отменяем pending clearWord, если он есть
+    if (clearWordTimeoutRef.current) {
+      clearTimeout(clearWordTimeoutRef.current);
+      clearWordTimeoutRef.current = null;
+    }
     
     // Очищаем поле, чтобы подсветка была видна
     setTiles(prev => prev.map(t => ({ ...t, used: false })));
