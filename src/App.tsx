@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 // --- ТИПЫ ---
 interface Tile {
@@ -13,7 +13,6 @@ interface Level {
 }
 
 // --- ДАННЫЕ УРОВНЕЙ ---
-// Все слова максимально простые, знакомые даже первоклассникам
 const gameLevels: Level[] = [
   {
     letters: "ШКОЛА",
@@ -113,76 +112,13 @@ export default function App() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [showDefinitionsModal, setShowDefinitionsModal] = useState(false);
-  
-  const messageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clearWordTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  // Refs для актуальных значений в обработчиках
-  const selectedIndicesRef = useRef(selectedIndices);
-  const foundWordsRef = useRef(foundWords);
-  const tilesRef = useRef(tiles);
-  const streakRef = useRef(streak);
-  const showWinModalRef = useRef(showWinModal);
-  
-  useEffect(() => { selectedIndicesRef.current = selectedIndices; }, [selectedIndices]);
-  useEffect(() => { foundWordsRef.current = foundWords; }, [foundWords]);
-  useEffect(() => { tilesRef.current = tiles; }, [tiles]);
-  useEffect(() => { streakRef.current = streak; }, [streak]);
-  useEffect(() => { showWinModalRef.current = showWinModal; }, [showWinModal]);
-  
-  // Обновляем ref сразу после изменения foundWords для синхронной проверки
-  const setFoundWordsAndRef = useCallback((updater: (prev: string[]) => string[]) => {
-    setFoundWords(prev => {
-      const newFound = updater(prev);
-      foundWordsRef.current = newFound;
-      return newFound;
-    });
-  }, []);
-  
-  // Реагируем на изменение foundWords - очистка поля и проверка победы
-  const prevFoundWordsLengthRef = useRef(0);
-  
-  useEffect(() => {
-    // Пропускаем первое срабатывание (загрузка уровня)
-    if (prevFoundWordsLengthRef.current === 0 && foundWords.length === 0) {
-      prevFoundWordsLengthRef.current = 0;
-      return;
-    }
-    
-    // Пропускаем, если длина не увеличилась (сброс уровня)
-    if (foundWords.length <= prevFoundWordsLengthRef.current) {
-      prevFoundWordsLengthRef.current = foundWords.length;
-      return;
-    }
-    
-    prevFoundWordsLengthRef.current = foundWords.length;
-    
-    const valid = validateDictionary(
-      gameLevels[currentLevelIndex].letters,
-      gameLevels[currentLevelIndex].words
-    );
-    
-    // Проверяем победу
-    if (foundWords.length === valid.length) {
-      setTimeout(() => setShowWinModal(true), 800);
-    } else {
-      // Очищаем поле, если это не последнее слово
-      // Сохраняем timeout в ref, чтобы можно было отменить
-      clearWordTimeoutRef.current = setTimeout(() => {
-        clearWord();
-        clearWordTimeoutRef.current = null;
-      }, 600);
-    }
-    
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [foundWords.length]);
+
+  // Refs для управления таймерами
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentLevel = gameLevels[currentLevelIndex];
-  
-  const validWords = useMemo(() => {
-    return validateDictionary(currentLevel.letters, currentLevel.words);
-  }, [currentLevelIndex]);
+  const validWords = validateDictionary(currentLevel.letters, currentLevel.words);
 
   // Инициализация уровня
   useEffect(() => {
@@ -195,20 +131,6 @@ export default function App() {
       id: index
     }));
     
-    // Отменяем все pending таймеры
-    if (clearWordTimeoutRef.current) {
-      clearTimeout(clearWordTimeoutRef.current);
-      clearWordTimeoutRef.current = null;
-    }
-    if (hintTimeoutRef.current) {
-      clearTimeout(hintTimeoutRef.current);
-      hintTimeoutRef.current = null;
-    }
-    if (messageTimeoutRef.current) {
-      clearTimeout(messageTimeoutRef.current);
-      messageTimeoutRef.current = null;
-    }
-    
     setTiles(newTiles);
     setSelectedIndices([]);
     setFoundWords([]);
@@ -220,133 +142,79 @@ export default function App() {
     setMessageType('');
     setShowWinModal(false);
     setShowDefinitionsModal(false);
-    prevFoundWordsLengthRef.current = 0;
     
-    // Обновляем слова уровня на валидные
     gameLevels[currentLevelIndex] = { ...level, words: valid };
   }, [currentLevelIndex]);
 
-  const showMessage = useCallback((text: string, type: 'success' | 'error' | 'hint') => {
-    if (messageTimeoutRef.current) clearTimeout(messageTimeoutRef.current);
+  const showMessage = (text: string, type: 'success' | 'error' | 'hint') => {
     setMessage(text);
     setMessageType(type);
     if (type === 'error') {
       setShakeWord(true);
       setTimeout(() => setShakeWord(false), 500);
     }
-    messageTimeoutRef.current = setTimeout(() => {
+    setTimeout(() => {
       setMessage('');
       setMessageType('');
     }, 3000);
-  }, []);
+  };
 
-  const clearWord = useCallback(() => {
-    // Отменяем pending clearWordTimeout
-    if (clearWordTimeoutRef.current) {
-      clearTimeout(clearWordTimeoutRef.current);
-      clearWordTimeoutRef.current = null;
-    }
+  const hintTimerRef = { current: null as ReturnType<typeof setTimeout> | null };
+  const clearTimerRef = { current: null as ReturnType<typeof setTimeout> | null };
+
+  const clearWord = () => {
     setTiles(prev => prev.map(t => ({ ...t, used: false })));
     setSelectedIndices([]);
     setHintTiles([]);
-    if (hintTimeoutRef.current) {
-      clearTimeout(hintTimeoutRef.current);
-      hintTimeoutRef.current = null;
-    }
     setMessage('');
     setMessageType('');
-  }, []);
+  };
 
-  const handleTileClick = useCallback((index: number) => {
-    // Используем ref для проверки актуального состояния
-    if (tilesRef.current[index].used) return;
-    
-    // Отменяем pending clearWordTimeout при клике
-    if (clearWordTimeoutRef.current) {
-      clearTimeout(clearWordTimeoutRef.current);
-      clearWordTimeoutRef.current = null;
-    }
+  const handleTileClick = (index: number) => {
+    if (tiles[index].used) return;
     
     setTiles(prev => prev.map((t, i) => i === index ? { ...t, used: true } : t));
-    setSelectedIndices(prev => {
-      // Защита от дубликатов при быстрых кликах
-      if (prev.includes(index)) return prev;
-      return [...prev, index];
-    });
+    setSelectedIndices(prev => [...prev, index]);
     setHintTiles([]);
-    if (hintTimeoutRef.current) {
-      clearTimeout(hintTimeoutRef.current);
-      hintTimeoutRef.current = null;
-    }
     setMessage('');
     setMessageType('');
-  }, []);
+  };
 
-  const removeLastLetter = useCallback(() => {
-    const indices = selectedIndicesRef.current;
-    if (indices.length === 0) return;
-    
-    // Отменяем pending clearWordTimeout при удалении буквы
-    if (clearWordTimeoutRef.current) {
-      clearTimeout(clearWordTimeoutRef.current);
-      clearWordTimeoutRef.current = null;
-    }
-    
-    const lastIdx = indices[indices.length - 1];
+  const removeLastLetter = () => {
+    if (selectedIndices.length === 0) return;
+    const lastIdx = selectedIndices[selectedIndices.length - 1];
     setTiles(prev => prev.map((tile, i) => i === lastIdx ? { ...tile, used: false } : tile));
     setSelectedIndices(prev => prev.slice(0, -1));
-    setHintTiles([]);
-    if (hintTimeoutRef.current) {
-      clearTimeout(hintTimeoutRef.current);
-      hintTimeoutRef.current = null;
-    }
-  }, []);
+  };
 
-  const checkWord = useCallback(() => {
-    const indices = selectedIndicesRef.current;
-    const currentTiles = tilesRef.current;
-    const word = indices.map(i => currentTiles[i].letter).join('');
+  const checkWord = () => {
+    const word = selectedIndices.map(i => tiles[i].letter).join('');
     
-    // Сразу очищаем подсветку при проверке
+    // Очищаем подсветку
     setHintTiles([]);
-    if (hintTimeoutRef.current) {
-      clearTimeout(hintTimeoutRef.current);
-      hintTimeoutRef.current = null;
-    }
-    // Отменяем pending clearWord
-    if (clearWordTimeoutRef.current) {
-      clearTimeout(clearWordTimeoutRef.current);
-      clearWordTimeoutRef.current = null;
-    }
     
     if (word.length < 3) {
       showMessage('Слово слишком короткое! (мин. 3 буквы)', 'error');
       return;
     }
 
-    // Проверяем, найдено ли уже это слово (используем ref для актуального состояния)
-    if (foundWordsRef.current.includes(word)) {
+    // Проверяем, найдено ли уже это слово
+    if (foundWords.includes(word)) {
       showMessage('Это слово уже найдено!', 'error');
       return;
     }
 
-    const valid = validateDictionary(
-      gameLevels[currentLevelIndex].letters,
-      gameLevels[currentLevelIndex].words
-    );
-
-    if (valid.includes(word)) {
-      // Правильное слово - добавляем в список найденных
-      const newFound = [...foundWordsRef.current, word];
-      setFoundWordsAndRef(() => newFound);
+    if (validWords.includes(word)) {
+      // Правильное слово
+      const newFoundWords = [...foundWords, word];
+      setFoundWords(newFoundWords);
       
-      const currentStreak = streakRef.current + 1;
-      setStreak(currentStreak);
+      const newStreak = streak + 1;
+      setStreak(newStreak);
       
       let points = 10 + (word.length * 2);
-      if (currentStreak > 1) points += currentStreak * 2;
+      if (newStreak > 1) points += newStreak * 2;
       
-      // Штраф за подсказки
       if (revealedFirstLetters.includes(word)) {
         points = Math.max(1, Math.floor(points * 0.5));
       }
@@ -355,26 +223,27 @@ export default function App() {
       }
 
       setScore(prev => prev + points);
-      showMessage(`+${points} очков! ${currentStreak > 1 ? `🔥 Серия x${currentStreak}` : ''}`, 'success');
+      showMessage(`+${points} очков! ${newStreak > 1 ? `🔥 Серия x${newStreak}` : ''}`, 'success');
+      
+      // Проверяем победу
+      if (newFoundWords.length === validWords.length) {
+        setTimeout(() => setShowWinModal(true), 800);
+      } else {
+        // Очищаем поле через 600мс
+        setTimeout(clearWord, 600);
+      }
     } else {
       setStreak(0);
       showMessage('Такого слова нет в списке!', 'error');
       setTimeout(clearWord, 600);
     }
-  }, [currentLevelIndex, showMessage, clearWord, revealedFirstLetters, revealedLengths, setFoundWordsAndRef]);
+  };
 
   // Обработка клавиатуры
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (showWinModalRef.current) {
-        if (e.key === 'Enter') {
-          if (currentLevelIndex >= gameLevels.length - 1) {
-            setCurrentLevelIndex(0);
-            setScore(0);
-          } else {
-            setCurrentLevelIndex(prev => prev + 1);
-          }
-        }
+      if (showWinModal) {
+        if (e.key === 'Enter') nextLevel();
         return;
       }
 
@@ -387,7 +256,7 @@ export default function App() {
       } else if (e.key === 'Escape') {
         clearWord();
       } else if (/^[А-ЯЁ]$/.test(key)) {
-        const tileIndex = tilesRef.current.findIndex(t => !t.used && t.letter === key);
+        const tileIndex = tiles.findIndex(t => !t.used && t.letter === key);
         if (tileIndex !== -1) {
           handleTileClick(tileIndex);
         }
@@ -396,16 +265,15 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [checkWord, removeLastLetter, clearWord, handleTileClick, currentLevelIndex]);
+  }, [tiles, selectedIndices, foundWords, streak, showWinModal]);
 
   // --- ПОДСКАЗКИ ---
   
-  const getRemainingWords = useCallback(() => {
+  const getRemainingWords = () => {
     return validWords.filter(w => !foundWords.includes(w));
-  }, [validWords, foundWords]);
+  };
 
-  // Подсказка 1: Показать первую букву (-10 очков)
-  const hintFirstLetter = useCallback(() => {
+  const hintFirstLetter = () => {
     if (score < 10) {
       showMessage('Недостаточно очков! Нужно минимум 10 ⚠️', 'error');
       return;
@@ -413,11 +281,9 @@ export default function App() {
     const remaining = getRemainingWords();
     if (remaining.length === 0) return;
     
-    // Выбираем самое длинное ненайденное слово
     const sorted = [...remaining].sort((a, b) => b.length - a.length);
     let targetWord = sorted[0];
     
-    // Если первая буква уже показана, берём следующее
     if (revealedFirstLetters.includes(targetWord)) {
       const other = remaining.find(w => !revealedFirstLetters.includes(w));
       if (other) {
@@ -431,10 +297,9 @@ export default function App() {
     setRevealedFirstLetters(prev => [...prev, targetWord]);
     setScore(prev => Math.max(0, prev - 10));
     showMessage(`💡 Первая буква слова из ${targetWord.length} букв: «${targetWord[0]}_» (-10 очков)`, 'hint');
-  }, [getRemainingWords, revealedFirstLetters, showMessage, score]);
+  };
 
-  // Подсказка 2: Показать длину слова (-5 очков)
-  const hintWordLength = useCallback(() => {
+  const hintWordLength = () => {
     if (score < 5) {
       showMessage('Недостаточно очков! Нужно минимум 5 ⚠️', 'error');
       return;
@@ -442,7 +307,6 @@ export default function App() {
     const remaining = getRemainingWords();
     if (remaining.length === 0) return;
     
-    // Показываем длину слова, которое ещё не было раскрыто
     const unrevealed = remaining.filter(w => !revealedLengths.includes(w));
     const targetWord = unrevealed.length > 0 ? unrevealed[0] : remaining[0];
     
@@ -461,10 +325,9 @@ export default function App() {
     setRevealedLengths(prev => [...prev, targetWord]);
     setScore(prev => Math.max(0, prev - 5));
     showMessage(`💡 Есть слово из ${targetWord.length} букв (-5 очков)`, 'hint');
-  }, [getRemainingWords, revealedLengths, showMessage, score]);
+  };
 
-  // Подсказка 3: Подсветить плитки (-15 очков)
-  const hintHighlightTiles = useCallback(() => {
+  const hintHighlightTiles = () => {
     if (score < 15) {
       showMessage('Недостаточно очков! Нужно минимум 15 ⚠️', 'error');
       return;
@@ -472,18 +335,8 @@ export default function App() {
     const remaining = getRemainingWords();
     if (remaining.length === 0) return;
     
-    // Отменяем pending clearWord, если он есть
-    if (clearWordTimeoutRef.current) {
-      clearTimeout(clearWordTimeoutRef.current);
-      clearWordTimeoutRef.current = null;
-    }
-    
-    // Выбираем слово для подсветки
     const targetWord = remaining[Math.floor(Math.random() * remaining.length)];
     
-    // Находим плитки, которые составляют это слово
-    // После очистки поля все плитки будут не использованы,
-    // поэтому просто ищем буквы в текущем наборе плиток
     const neededLetters: Record<string, number> = {};
     for (const char of targetWord) {
       neededLetters[char] = (neededLetters[char] || 0) + 1;
@@ -492,8 +345,8 @@ export default function App() {
     const tileIndices: number[] = [];
     const usedForHint: Record<string, number> = {};
     
-    // Вычисляем плитки на основе текущего состояния (игнорируем used, т.к. поле будет очищено)
-    tilesRef.current.forEach((tile, idx) => {
+    // Вычисляем плитки на основе ТЕКУЩЕГО состояния (игнорируем used)
+    tiles.forEach((tile, idx) => {
       if (neededLetters[tile.letter] > 0) {
         const alreadyUsed = usedForHint[tile.letter] || 0;
         if (alreadyUsed < neededLetters[tile.letter]) {
@@ -503,33 +356,27 @@ export default function App() {
       }
     });
     
-    // Очищаем поле синхронно
-    setTiles(prev => prev.map(t => ({ ...t, used: false })));
-    setSelectedIndices([]);
+    // Очищаем поле
+    clearWord();
     
     if (tileIndices.length > 0) {
-      if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
       setHintTiles(tileIndices);
       setScore(prev => Math.max(0, prev - 15));
-      showMessage(`✨ Буквы подсвечены! Поле очищено (-15 очков)`, 'hint');
+      showMessage(`✨ Буквы подсвечены! (-15 очков)`, 'hint');
       
-      hintTimeoutRef.current = setTimeout(() => {
-        setHintTiles([]);
-        hintTimeoutRef.current = null;
-      }, 3000);
+      setTimeout(() => setHintTiles([]), 3000);
     }
-  }, [getRemainingWords, showMessage, score]);
+  };
 
-  const nextLevel = useCallback(() => {
+  const nextLevel = () => {
     if (currentLevelIndex >= gameLevels.length - 1) {
       setCurrentLevelIndex(0);
       setScore(0);
     } else {
       setCurrentLevelIndex(prev => prev + 1);
     }
-  }, [currentLevelIndex]);
+  };
 
-  // Прогресс
   const progress = validWords.length > 0 ? (foundWords.length / validWords.length) * 100 : 0;
 
   return (
@@ -599,9 +446,6 @@ export default function App() {
         {/* Tiles */}
         <div className="flex flex-wrap justify-center gap-4 mb-8 max-w-[600px]">
           {tiles.map((tile, idx) => {
-            // Подсвечиваем ТОЛЬКО если:
-            // 1. Плитка НЕ использована
-            // 2. Плитка есть в списке подсказки
             const shouldHighlight = !tile.used && hintTiles.includes(idx);
             
             return (
@@ -631,7 +475,6 @@ export default function App() {
             Очистить
           </button>
           
-          {/* Подсказки */}
           <div className="flex gap-2 flex-wrap justify-center">
             <button
               onClick={hintFirstLetter}
@@ -747,8 +590,17 @@ export default function App() {
             </div>
           </div>
         </div>
-
       </main>
+
+      {/* Плавающая кнопка обратной связи */}
+      <button
+        onClick={() => setShowFeedbackModal(true)}
+        className="fixed bottom-6 right-6 z-[999] flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all duration-300 shadow-[0_6px_20px_rgba(94,53,177,0.3)] bg-gradient-to-r from-[#42a5f5] via-[#5c6bc0] to-[#7e57c2] text-white hover:shadow-[0_8px_30px_rgba(94,53,177,0.5)] hover:-translate-y-1 active:translate-y-0 active:scale-95 cursor-pointer animate-[floatBtn_3s_ease-in-out_infinite]"
+        title="Обратная связь"
+      >
+        <span className="text-xl">💬</span>
+        <span className="hidden sm:inline">Обратная связь</span>
+      </button>
 
       {/* Win Modal */}
       {showWinModal && (
@@ -771,6 +623,30 @@ export default function App() {
                 {currentLevelIndex >= gameLevels.length - 1 ? '🔄 Начать заново' : 'Следующий уровень →'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[1001] p-4">
+          <div className="bg-white rounded-[30px] w-full max-w-[600px] h-[80vh] flex flex-col overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-[popIn_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-[#42a5f5] to-[#7e57c2]">
+              <h3 className="text-white font-bold text-lg m-0">💬 Обратная связь</h3>
+              <button
+                onClick={() => setShowFeedbackModal(false)}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xl transition-colors cursor-pointer border-none"
+              >
+                ×
+              </button>
+            </div>
+            <iframe
+              src="https://docs.google.com/forms/d/e/1FAIpQLSfhCus-2jCHuhyRteGpFJ83rW_deEx61DiMZP2dqiTCf-g0Lw/viewform?embedded=true"
+              className="flex-1 w-full border-none"
+              title="Форма обратной связи"
+            >
+              Загрузка...
+            </iframe>
           </div>
         </div>
       )}
@@ -809,41 +685,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Плавающая кнопка обратной связи */}
-      <button
-        onClick={() => setShowFeedbackModal(true)}
-        className="fixed bottom-6 right-6 z-[999] flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all duration-300 shadow-[0_6px_20px_rgba(94,53,177,0.3)] bg-gradient-to-r from-[#42a5f5] via-[#5c6bc0] to-[#7e57c2] text-white hover:shadow-[0_8px_30px_rgba(94,53,177,0.5)] hover:-translate-y-1 active:translate-y-0 active:scale-95 cursor-pointer animate-[floatBtn_3s_ease-in-out_infinite]"
-        title="Обратная связь"
-      >
-        <span className="text-xl">💬</span>
-        <span className="hidden sm:inline">Обратная связь</span>
-      </button>
-
-      {/* Модальное окно обратной связи с iframe */}
-      {showFeedbackModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[1001] p-4">
-          <div className="bg-white rounded-[30px] w-full max-w-[600px] h-[80vh] flex flex-col overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-[popIn_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]">
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gradient-to-r from-[#42a5f5] to-[#7e57c2]">
-              <h3 className="text-white font-bold text-lg m-0">💬 Обратная связь</h3>
-              <button
-                onClick={() => setShowFeedbackModal(false)}
-                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xl transition-colors cursor-pointer border-none"
-              >
-                ×
-              </button>
-            </div>
-            <iframe
-              src="https://docs.google.com/forms/d/e/1FAIpQLSfhCus-2jCHuhyRteGpFJ83rW_deEx61DiMZP2dqiTCf-g0Lw/viewform?embedded=true"
-              className="flex-1 w-full border-none"
-              title="Форма обратной связи"
-            >
-              Загрузка...
-            </iframe>
-          </div>
-        </div>
-      )}
-
-      {/* Модальное окно значения слова */}
+      {/* Word Definition Modal */}
       {selectedWord && (
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[1001] p-4"
