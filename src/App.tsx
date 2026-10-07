@@ -261,6 +261,13 @@ export default function App() {
     const currentTiles = tilesRef.current;
     const word = indices.map(i => currentTiles[i].letter).join('');
     
+    // Сразу очищаем подсветку при проверке
+    setHintTiles([]);
+    if (hintTimeoutRef.current) {
+      clearTimeout(hintTimeoutRef.current);
+      hintTimeoutRef.current = null;
+    }
+    
     if (word.length < 3) {
       showMessage('Слово слишком короткое! (мин. 3 буквы)', 'error');
       return;
