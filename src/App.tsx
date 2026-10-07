@@ -427,7 +427,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+  }, [tiles, selectedIndices, foundWords, streak, showWinModal, score]);
 
   const progress = validWords.length > 0 ? (foundWords.length / validWords.length) * 100 : 0;
 
