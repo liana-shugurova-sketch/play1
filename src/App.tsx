@@ -440,12 +440,20 @@ export default function App() {
     }
   }, [currentLevelIndex]);
 
-  // Обработка клавиатуры - ОДИН обработчик без зависимостей
+  // Обработка клавиатуры - ОДИН обработчик, создаётся ТОЛЬКО ОДИН РАЗ
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Сбрасываем подсказку "Слово" при любом действии
+      setHintWordValue(null);
+      
       if (showWinModalRef.current) {
         if (e.key === 'Enter') {
-          nextLevel();
+          if (currentLevelIndex >= gameLevels.length - 1) {
+            setCurrentLevelIndex(0);
+            setScore(0);
+          } else {
+            setCurrentLevelIndex(prev => prev + 1);
+          }
         }
         return;
       }
@@ -453,23 +461,133 @@ export default function App() {
       const key = e.key.toUpperCase();
       
       if (e.key === 'Enter') {
-        checkWord();
+        // Встроенная логика checkWord
+        const indices = selectedIndicesRef.current;
+        const currentTiles = tilesRef.current;
+        const word = indices.map(i => currentTiles[i].letter).join('');
+        
+        // Отменяем таймеры
+        if (clearTimerRef.current) {
+          clearTimeout(clearTimerRef.current);
+          clearTimerRef.current = null;
+        }
+        if (messageTimerRef.current) {
+          clearTimeout(messageTimerRef.current);
+          messageTimerRef.current = null;
+        }
+        
+        setMessage('');
+        setMessageType('');
+        
+        if (word.length < 3) {
+          showMessage('Слово слишком короткое! (мин. 3 буквы)', 'error');
+          return;
+        }
+
+        const currentFoundWords = foundWordsRef.current;
+        if (currentFoundWords.includes(word)) {
+          showMessage('Это слово уже найдено!', 'error');
+          return;
+        }
+
+        const currentValidWords = validateDictionary(
+          gameLevels[currentLevelIndex].letters,
+          gameLevels[currentLevelIndex].words
+        );
+
+        if (currentValidWords.includes(word)) {
+          const newFoundWords = [...currentFoundWords, word];
+          setFoundWords(newFoundWords);
+          
+          const currentStreak = streakRef.current;
+          const newStreak = currentStreak + 1;
+          setStreak(newStreak);
+          
+          let points = 10 + (word.length * 2);
+          if (newStreak > 1) points += newStreak * 2;
+          
+          setScore(prev => prev + points);
+          showMessage(`+${points} очков! ${newStreak > 1 ? `🔥 Серия x${newStreak}` : ''}`, 'success');
+          
+          if (newFoundWords.length === currentValidWords.length) {
+            setTimeout(() => setShowWinModal(true), 800);
+          } else {
+            if (clearTimerRef.current) {
+              clearTimeout(clearTimerRef.current);
+            }
+            clearTimerRef.current = setTimeout(() => {
+              setTiles(prev => prev.map(t => ({ ...t, used: false })));
+              setSelectedIndices([]);
+              setMessage('');
+              setMessageType('');
+              clearTimerRef.current = null;
+            }, 600);
+          }
+        } else {
+          setStreak(0);
+          showMessage('Такого слова нет в списке!', 'error');
+          setTimeout(() => {
+            setTiles(prev => prev.map(t => ({ ...t, used: false })));
+            setSelectedIndices([]);
+            setMessage('');
+            setMessageType('');
+          }, 600);
+        }
       } else if (e.key === 'Backspace') {
-        removeLastLetter();
+        // Встроенная логика removeLastLetter
+        const indices = selectedIndicesRef.current;
+        if (indices.length === 0) return;
+        const lastIdx = indices[indices.length - 1];
+        
+        if (messageTimerRef.current) {
+          clearTimeout(messageTimerRef.current);
+          messageTimerRef.current = null;
+        }
+        
+        setTiles(prev => prev.map((tile, i) => i === lastIdx ? { ...tile, used: false } : tile));
+        setSelectedIndices(prev => prev.slice(0, -1));
+        setMessage('');
+        setMessageType('');
       } else if (e.key === 'Escape') {
-        clearWord();
+        // Встроенная логика clearWord
+        if (clearTimerRef.current) {
+          clearTimeout(clearTimerRef.current);
+          clearTimerRef.current = null;
+        }
+        if (messageTimerRef.current) {
+          clearTimeout(messageTimerRef.current);
+          messageTimerRef.current = null;
+        }
+        
+        setTiles(prev => prev.map(t => ({ ...t, used: false })));
+        setSelectedIndices([]);
+        setMessage('');
+        setMessageType('');
       } else if (/^[А-ЯЁ]$/.test(key)) {
+        // Встроенная логика handleTileClick
         const currentTiles = tilesRef.current;
         const tileIndex = currentTiles.findIndex(t => !t.used && t.letter === key);
         if (tileIndex !== -1) {
-          handleTileClick(tileIndex);
+          if (clearTimerRef.current) {
+            clearTimeout(clearTimerRef.current);
+            clearTimerRef.current = null;
+          }
+          if (messageTimerRef.current) {
+            clearTimeout(messageTimerRef.current);
+            messageTimerRef.current = null;
+          }
+          
+          setTiles(prev => prev.map((t, i) => i === tileIndex ? { ...t, used: true } : t));
+          setSelectedIndices(prev => [...prev, tileIndex]);
+          setMessage('');
+          setMessageType('');
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [checkWord, removeLastLetter, clearWord, handleTileClick, nextLevel]);
+  }, []); // ПУСТЫЕ ЗАВИСИМОСТИ - создаётся ТОЛЬКО ОДИН РАЗ!
 
   const progress = validWords.length > 0 ? (foundWords.length / validWords.length) * 100 : 0;
 
