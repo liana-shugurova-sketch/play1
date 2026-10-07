@@ -482,6 +482,8 @@ export default function App() {
     const targetWord = remaining[Math.floor(Math.random() * remaining.length)];
     
     // Находим плитки, которые составляют это слово
+    // После очистки поля все плитки будут не использованы,
+    // поэтому просто ищем буквы в текущем наборе плиток
     const neededLetters: Record<string, number> = {};
     for (const char of targetWord) {
       neededLetters[char] = (neededLetters[char] || 0) + 1;
@@ -490,25 +492,19 @@ export default function App() {
     const tileIndices: number[] = [];
     const usedForHint: Record<string, number> = {};
     
-    // Очищаем поле и сразу вычисляем плитки для подсветки
-    // Все плитки будут не использованы после очистки
-    setTiles(prev => {
-      const clearedTiles = prev.map(t => ({ ...t, used: false }));
-      
-      // Вычисляем плитки для подсветки на основе очищенного состояния
-      clearedTiles.forEach((tile, idx) => {
-        if (neededLetters[tile.letter] > 0) {
-          const alreadyUsed = usedForHint[tile.letter] || 0;
-          if (alreadyUsed < neededLetters[tile.letter]) {
-            tileIndices.push(idx);
-            usedForHint[tile.letter] = alreadyUsed + 1;
-          }
+    // Вычисляем плитки на основе текущего состояния (игнорируем used, т.к. поле будет очищено)
+    tilesRef.current.forEach((tile, idx) => {
+      if (neededLetters[tile.letter] > 0) {
+        const alreadyUsed = usedForHint[tile.letter] || 0;
+        if (alreadyUsed < neededLetters[tile.letter]) {
+          tileIndices.push(idx);
+          usedForHint[tile.letter] = alreadyUsed + 1;
         }
-      });
-      
-      return clearedTiles;
+      }
     });
     
+    // Очищаем поле синхронно
+    setTiles(prev => prev.map(t => ({ ...t, used: false })));
     setSelectedIndices([]);
     
     if (tileIndices.length > 0) {
@@ -606,8 +602,7 @@ export default function App() {
             // Подсвечиваем ТОЛЬКО если:
             // 1. Плитка НЕ использована
             // 2. Плитка есть в списке подсказки
-            // 3. Поле пустое (нет выбранных букв)
-            const shouldHighlight = !tile.used && hintTiles.includes(idx) && selectedIndices.length === 0;
+            const shouldHighlight = !tile.used && hintTiles.includes(idx);
             
             return (
               <div
