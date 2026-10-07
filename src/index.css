@@ -1,10 +1,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
 @import "tailwindcss";
 
+/* Принудительно светлая тема — чтобы на телефоне цвета не менялись */
+:root {
+  color-scheme: light only;
+}
+
+html {
+  color-scheme: light;
+}
+
 body {
   font-family: 'Nunito', sans-serif;
   margin: 0;
   padding: 0;
+  background: linear-gradient(135deg, #fff5eb, #ffebee, #e1f5fe) !important;
+  color: #5d4037;
+}
+
+/* Отключаем авто-тёмную тему на всех устройствах */
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background: linear-gradient(135deg, #fff5eb, #ffebee, #e1f5fe) !important;
+    color: #5d4037;
+  }
 }
 
 * {
