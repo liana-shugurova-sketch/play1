@@ -114,6 +114,7 @@ export default function App() {
 
   // Refs для управления таймерами
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentLevel = gameLevels[currentLevelIndex];
   const validWords = validateDictionary(currentLevel.letters, currentLevel.words);
@@ -144,15 +145,23 @@ export default function App() {
   }, [currentLevelIndex]);
 
   const showMessage = (text: string, type: 'success' | 'error' | 'hint') => {
+    // Отменяем предыдущий таймер сообщения
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+    }
+    
     setMessage(text);
     setMessageType(type);
     if (type === 'error') {
       setShakeWord(true);
       setTimeout(() => setShakeWord(false), 500);
     }
-    setTimeout(() => {
+    
+    // Устанавливаем новый таймер для очистки сообщения
+    messageTimerRef.current = setTimeout(() => {
       setMessage('');
       setMessageType('');
+      messageTimerRef.current = null;
     }, 3000);
   };
 
@@ -161,6 +170,10 @@ export default function App() {
     if (clearTimerRef.current) {
       clearTimeout(clearTimerRef.current);
       clearTimerRef.current = null;
+    }
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
     }
     
     setTiles(prev => prev.map(t => ({ ...t, used: false })));
