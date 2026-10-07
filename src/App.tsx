@@ -432,6 +432,10 @@ export default function App() {
     const remaining = getRemainingWords();
     if (remaining.length === 0) return;
     
+    // Очищаем поле, чтобы подсветка была видна
+    setTiles(prev => prev.map(t => ({ ...t, used: false })));
+    setSelectedIndices([]);
+    
     // Выбираем слово для подсветки
     const targetWord = remaining[Math.floor(Math.random() * remaining.length)];
     
@@ -459,7 +463,7 @@ export default function App() {
       if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
       setHintTiles(tileIndices);
       setScore(prev => Math.max(0, prev - 15));
-      showMessage(`✨ Подсвечены буквы для слова из ${targetWord.length} букв (-15 очков)`, 'hint');
+      showMessage(`✨ Буквы подсвечены! Поле очищено (-15 очков)`, 'hint');
       
       hintTimeoutRef.current = setTimeout(() => {
         setHintTiles([]);
