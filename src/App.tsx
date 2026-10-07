@@ -132,12 +132,10 @@ export default function App() {
   
   // Очищаем подсветку при любом изменении выбранных букв
   useEffect(() => {
-    if (selectedIndices.length > 0) {
-      setHintTiles([]);
-      if (hintTimeoutRef.current) {
-        clearTimeout(hintTimeoutRef.current);
-        hintTimeoutRef.current = null;
-      }
+    setHintTiles([]);
+    if (hintTimeoutRef.current) {
+      clearTimeout(hintTimeoutRef.current);
+      hintTimeoutRef.current = null;
     }
   }, [selectedIndices]);
   
