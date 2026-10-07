@@ -324,23 +324,21 @@ export default function App() {
       return;
     }
 
+    // Проверяем, найдено ли уже это слово (используем ref для актуального состояния)
+    if (foundWordsRef.current.includes(word)) {
+      showMessage('Это слово уже найдено!', 'error');
+      return;
+    }
+
     const valid = validateDictionary(
       gameLevels[currentLevelIndex].letters,
       gameLevels[currentLevelIndex].words
     );
 
     if (valid.includes(word)) {
-      // Правильное слово - используем функциональное обновление для актуального состояния
-      setFoundWordsAndRef(prev => {
-        // Проверяем внутри обновления, что слова ещё нет
-        if (prev.includes(word)) {
-          showMessage('Это слово уже найдено!', 'error');
-          return prev;
-        }
-        
-        const newFound = [...prev, word];
-        return newFound;
-      });
+      // Правильное слово - добавляем в список найденных
+      const newFound = [...foundWordsRef.current, word];
+      setFoundWordsAndRef(() => newFound);
       
       const currentStreak = streakRef.current + 1;
       setStreak(currentStreak);
@@ -480,10 +478,6 @@ export default function App() {
       clearWordTimeoutRef.current = null;
     }
     
-    // Очищаем поле, чтобы подсветка была видна
-    setTiles(prev => prev.map(t => ({ ...t, used: false })));
-    setSelectedIndices([]);
-    
     // Выбираем слово для подсветки
     const targetWord = remaining[Math.floor(Math.random() * remaining.length)];
     
@@ -496,16 +490,26 @@ export default function App() {
     const tileIndices: number[] = [];
     const usedForHint: Record<string, number> = {};
     
-    // Используем tilesRef для получения актуальных плиток
-    tilesRef.current.forEach((tile, idx) => {
-      if (!tile.used && neededLetters[tile.letter] > 0) {
-        const alreadyUsed = usedForHint[tile.letter] || 0;
-        if (alreadyUsed < neededLetters[tile.letter]) {
-          tileIndices.push(idx);
-          usedForHint[tile.letter] = alreadyUsed + 1;
+    // Очищаем поле и сразу вычисляем плитки для подсветки
+    // Все плитки будут не использованы после очистки
+    setTiles(prev => {
+      const clearedTiles = prev.map(t => ({ ...t, used: false }));
+      
+      // Вычисляем плитки для подсветки на основе очищенного состояния
+      clearedTiles.forEach((tile, idx) => {
+        if (neededLetters[tile.letter] > 0) {
+          const alreadyUsed = usedForHint[tile.letter] || 0;
+          if (alreadyUsed < neededLetters[tile.letter]) {
+            tileIndices.push(idx);
+            usedForHint[tile.letter] = alreadyUsed + 1;
+          }
         }
-      }
+      });
+      
+      return clearedTiles;
     });
+    
+    setSelectedIndices([]);
     
     if (tileIndices.length > 0) {
       if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
