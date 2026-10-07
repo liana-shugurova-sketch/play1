@@ -111,6 +111,8 @@ export default function App() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [showDefinitionsModal, setShowDefinitionsModal] = useState(false);
+  // Отдельное состояние для подсказки "Слово" - не связано с showMessage
+  const [hintWordValue, setHintWordValue] = useState<string | null>(null);
 
   // Refs для управления таймерами
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -150,6 +152,7 @@ export default function App() {
     setMessageType('');
     setShowWinModal(false);
     setShowDefinitionsModal(false);
+    setHintWordValue(null);
     
     gameLevels[currentLevelIndex] = { ...level, words: valid };
   }, [currentLevelIndex]);
@@ -187,6 +190,9 @@ export default function App() {
       messageTimerRef.current = null;
     }
     
+    // Сбрасываем подсказку "Слово"
+    setHintWordValue(null);
+    
     setTiles(prev => prev.map(t => ({ ...t, used: false })));
     setSelectedIndices([]);
     setMessage('');
@@ -208,6 +214,9 @@ export default function App() {
       messageTimerRef.current = null;
     }
     
+    // Сбрасываем подсказку "Слово"
+    setHintWordValue(null);
+    
     setTiles(prev => prev.map((t, i) => i === index ? { ...t, used: true } : t));
     setSelectedIndices(prev => [...prev, index]);
     setMessage('');
@@ -223,6 +232,9 @@ export default function App() {
       clearTimeout(messageTimerRef.current);
       messageTimerRef.current = null;
     }
+    
+    // Сбрасываем подсказку "Слово"
+    setHintWordValue(null);
     
     setTiles(prev => prev.map((tile, i) => i === lastIdx ? { ...tile, used: false } : tile));
     setSelectedIndices(prev => prev.slice(0, -1));
@@ -244,6 +256,10 @@ export default function App() {
       clearTimeout(messageTimerRef.current);
       messageTimerRef.current = null;
     }
+    
+    // Сбрасываем подсказку "Слово"
+    setHintWordValue(null);
+    
     setMessage('');
     setMessageType('');
     
@@ -372,7 +388,8 @@ export default function App() {
     const targetWord = remaining[Math.floor(Math.random() * remaining.length)];
     
     setScore(prev => Math.max(0, prev - 15));
-    showMessage(`✨ Слово: ${targetWord} (-15 очков)`, 'hint');
+    // Устанавливаем отдельное состояние подсказки
+    setHintWordValue(targetWord);
   };
 
   const nextLevel = () => {
@@ -462,6 +479,13 @@ export default function App() {
         }`}>
           {message || '\u00A0'}
         </div>
+
+        {/* Подсказка "Слово" - отдельный блок */}
+        {hintWordValue && (
+          <div className="mb-3 px-6 py-3 bg-gradient-to-r from-[#f3e5f5] to-[#e1bee7] rounded-2xl text-center font-bold text-[#8e24aa] text-lg shadow-[0_4px_10px_rgba(142,36,170,0.2)] animate-[popIn_0.3s_cubic-bezier(0.175,0.885,0.32,1.275)]">
+            ✨ Слово: <span className="text-[#6a1b9a]">{hintWordValue}</span>
+          </div>
+        )}
 
         {/* Word Display */}
         <div className={`flex gap-2.5 min-h-[60px] mb-8 flex-wrap justify-center ${shakeWord ? 'animate-[shake_0.5s]' : ''}`}>
