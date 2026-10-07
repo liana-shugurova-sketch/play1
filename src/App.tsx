@@ -159,9 +159,6 @@ export default function App() {
     }, 3000);
   };
 
-  const hintTimerRef = { current: null as ReturnType<typeof setTimeout> | null };
-  const clearTimerRef = { current: null as ReturnType<typeof setTimeout> | null };
-
   const clearWord = () => {
     setTiles(prev => prev.map(t => ({ ...t, used: false })));
     setSelectedIndices([]);
@@ -172,6 +169,18 @@ export default function App() {
 
   const handleTileClick = (index: number) => {
     if (tiles[index].used) return;
+    
+    // Отменяем таймер очистки поля, если пользователь начал вводить новое слово
+    if (clearTimerRef.current) {
+      clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = null;
+    }
+    
+    // Отменяем таймер подсветки
+    if (hintTimerRef.current) {
+      clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = null;
+    }
     
     setTiles(prev => prev.map((t, i) => i === index ? { ...t, used: true } : t));
     setSelectedIndices(prev => [...prev, index]);
@@ -190,8 +199,18 @@ export default function App() {
   const checkWord = () => {
     const word = selectedIndices.map(i => tiles[i].letter).join('');
     
-    // Очищаем подсветку
+    // Очищаем подсветку и отменяем таймер подсветки
     setHintTiles([]);
+    if (hintTimerRef.current) {
+      clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = null;
+    }
+    
+    // Отменяем таймер очистки поля перед проверкой
+    if (clearTimerRef.current) {
+      clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = null;
+    }
     
     if (word.length < 3) {
       showMessage('Слово слишком короткое! (мин. 3 буквы)', 'error');
@@ -229,8 +248,14 @@ export default function App() {
       if (newFoundWords.length === validWords.length) {
         setTimeout(() => setShowWinModal(true), 800);
       } else {
-        // Очищаем поле через 600мс
-        setTimeout(clearWord, 600);
+        // Сохраняем таймер очистки поля в ref
+        if (clearTimerRef.current) {
+          clearTimeout(clearTimerRef.current);
+        }
+        clearTimerRef.current = setTimeout(() => {
+          clearWord();
+          clearTimerRef.current = null;
+        }, 600);
       }
     } else {
       setStreak(0);
@@ -360,11 +385,20 @@ export default function App() {
     clearWord();
     
     if (tileIndices.length > 0) {
+      // Отменяем старый таймер, если он есть
+      if (hintTimerRef.current) {
+        clearTimeout(hintTimerRef.current);
+      }
+      
       setHintTiles(tileIndices);
       setScore(prev => Math.max(0, prev - 15));
       showMessage(`✨ Буквы подсвечены! (-15 очков)`, 'hint');
       
-      setTimeout(() => setHintTiles([]), 3000);
+      // Сохраняем новый таймер в ref
+      hintTimerRef.current = setTimeout(() => {
+        setHintTiles([]);
+        hintTimerRef.current = null;
+      }, 3000);
     }
   };
 
