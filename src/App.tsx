@@ -657,18 +657,16 @@ export default function App() {
       {/* Main */}
       <main className="flex-1 max-w-[800px] mx-auto w-full px-5 flex flex-col items-center">
         {/* Game Info */}
-        <div className="flex justify-between w-full bg-white py-4 px-6 rounded-[20px] shadow-[0_10px_20px_rgba(93,64,55,0.1)] mb-5 font-bold text-xl text-[#795548]">
+        <div className="flex justify-between items-center w-full bg-white py-4 px-6 rounded-[20px] shadow-[0_10px_20px_rgba(93,64,55,0.1)] mb-5 font-bold text-xl text-[#795548]">
           <div>Уровень: <span className="text-[#ab47bc] text-2xl">{currentLevelIndex + 1}</span></div>
+          <button
+            onClick={() => setShowFoundWordsModal(true)}
+            className="px-4 py-2 bg-[#f5f5f5] hover:bg-[#eeeeee] text-[#795548] rounded-full font-bold text-sm shadow-[0_2px_5px_rgba(0,0,0,0.05)] hover:shadow-[0_3px_8px_rgba(0,0,0,0.1)] active:scale-95 transition-all cursor-pointer"
+          >
+            📚 {foundWords.length}/{validWords.length}
+          </button>
           <div>Очки: <span className="text-[#ef6c00] text-2xl">{score}</span></div>
         </div>
-
-        {/* Кнопка найденных слов */}
-        <button
-          onClick={() => setShowFoundWordsModal(true)}
-          className="w-full mb-6 px-6 py-4 bg-gradient-to-r from-[#66bb6a] to-[#43a047] text-white rounded-[20px] font-bold text-lg shadow-[0_4px_10px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_15px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all cursor-pointer"
-        >
-          📚 Найденные слова ({foundWords.length}/{validWords.length})
-        </button>
 
         {/* Message */}
         <div className={`h-8 mb-3 font-bold text-center transition-all ${
@@ -755,18 +753,29 @@ export default function App() {
         </div>
 
         {/* Controls */}
-        <div className="flex gap-3 mb-8 flex-wrap justify-center">
-          <button
-            onClick={clearWord}
-            className="px-5 py-3 border-none rounded-full font-bold text-sm cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#ffa726] to-[#fb8c00] text-white"
-          >
-            Очистить
-          </button>
+        <div className="w-full mb-8">
+          {/* Основные действия */}
+          <div className="flex justify-between items-center gap-3 mb-4">
+            <button
+              onClick={clearWord}
+              className="flex-1 px-5 py-3 border-none rounded-full font-bold text-sm cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#ffa726] to-[#fb8c00] text-white"
+            >
+              🗑️ Очистить
+            </button>
+            
+            <button
+              onClick={checkWord}
+              className="flex-1 px-5 py-3 border-none rounded-full font-bold text-sm cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#66bb6a] to-[#43a047] text-white"
+            >
+              ✓ Проверить
+            </button>
+          </div>
           
-          <div className="flex gap-2 flex-wrap justify-center">
+          {/* Подсказки */}
+          <div className="flex gap-2 justify-center">
             <button
               onClick={hintFirstLetter}
-              className="px-4 py-3 border-none rounded-full font-bold text-xs cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#ab47bc] to-[#8e24aa] text-white relative"
+              className="px-4 py-2 border-none rounded-full font-bold text-xs cursor-pointer transition-transform active:scale-95 shadow-[0_2px_5px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#ab47bc] to-[#8e24aa] text-white relative"
               title="Показать первую букву ненайденного слова (-10 очков)"
             >
               💡 Буква
@@ -775,7 +784,7 @@ export default function App() {
             
             <button
               onClick={hintWordLength}
-              className="px-4 py-3 border-none rounded-full font-bold text-xs cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#7c4dff] to-[#651fff] text-white relative"
+              className="px-4 py-2 border-none rounded-full font-bold text-xs cursor-pointer transition-transform active:scale-95 shadow-[0_2px_5px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#7c4dff] to-[#651fff] text-white relative"
               title="Показать длину ненайденного слова (-5 очков)"
             >
               🔢 Длина
@@ -784,20 +793,13 @@ export default function App() {
             
             <button
               onClick={hintShowWord}
-              className="px-4 py-3 border-none rounded-full font-bold text-xs cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#e040fb] to-[#aa00ff] text-white relative outline-none focus:outline-none focus-visible:outline-none"
+              className="px-4 py-2 border-none rounded-full font-bold text-xs cursor-pointer transition-transform active:scale-95 shadow-[0_2px_5px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#e040fb] to-[#aa00ff] text-white relative outline-none focus:outline-none focus-visible:outline-none"
               title="Показать полное слово (-15 очков)"
             >
               ✨ Слово
               <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[0.6rem] px-1.5 py-0.5 rounded-full font-bold">-15</span>
             </button>
           </div>
-
-          <button
-            onClick={checkWord}
-            className="px-5 py-3 border-none rounded-full font-bold text-sm cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#66bb6a] to-[#43a047] text-white"
-          >
-            Проверить ✓
-          </button>
         </div>
 
         {/* Progress */}
