@@ -124,6 +124,9 @@ export default function App() {
   const [showHintModal, setShowHintModal] = useState(false);
   const [hintType, setHintType] = useState<'word' | 'letter' | 'length'>('word');
   const [hintContent, setHintContent] = useState<string>('');
+  
+  // Модальное окно для найденных слов
+  const [showFoundWordsModal, setShowFoundWordsModal] = useState(false);
 
   // Refs для управления таймерами
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -659,64 +662,13 @@ export default function App() {
           <div>Очки: <span className="text-[#ef6c00] text-2xl">{score}</span></div>
         </div>
 
-        {/* Words List - перемещён выше для удобства */}
-        <div className="w-full mb-6">
-          <h3 className="text-center text-[#8e24aa] text-xl font-bold mb-4">📚 Найденные слова</h3>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-2.5 w-full justify-items-center">
-            {validWords.map((word, idx) => {
-              const isFound = foundWords.includes(word);
-              const isFirstLetterRevealed = revealedFirstLetters.includes(word);
-              const isLengthRevealed = revealedLengths.includes(word);
-              
-              let displayText = '';
-              if (isFound) {
-                displayText = word;
-              } else if (isFirstLetterRevealed) {
-                displayText = word[0] + '•'.repeat(word.length - 1);
-              } else if (isLengthRevealed) {
-                displayText = '•'.repeat(word.length);
-              } else {
-                displayText = '•'.repeat(word.length);
-              }
-              
-              return (
-                <div
-                  key={idx}
-                  onClick={() => {
-                    if (isFound) {
-                      setSelectedWord(word);
-                    } else if (isFirstLetterRevealed) {
-                      setHintType('letter');
-                      setHintContent(`${word[0]}${'•'.repeat(word.length - 1)}`);
-                      setShowHintModal(true);
-                    } else if (isLengthRevealed) {
-                      setHintType('length');
-                      setHintContent(`${word.length} букв`);
-                      setShowHintModal(true);
-                    }
-                  }}
-                  className={`bg-white py-2 px-2 rounded-xl text-center font-bold text-sm shadow-[0_2px_5px_rgba(0,0,0,0.05)] transition-all duration-300
-                    ${isFound ? 'text-[#2e7d32] bg-[#e8f5e9] scale-105 cursor-pointer hover:scale-110 hover:shadow-[0_4px_10px_rgba(0,0,0,0.15)]' : 'text-[#b0bec5]'}
-                    ${isFirstLetterRevealed && !isFound ? 'text-[#8e24aa] bg-[#f3e5f5] cursor-pointer hover:scale-105' : ''}
-                    ${isLengthRevealed && !isFound && !isFirstLetterRevealed ? 'cursor-pointer hover:scale-105' : ''}
-                  `}
-                  title={isFound ? 'Нажми, чтобы узнать значение' : isFirstLetterRevealed || isLengthRevealed ? 'Нажми, чтобы увидеть подсказку' : ''}
-                >
-                  {displayText}
-                  {isLengthRevealed && !isFound && !isFirstLetterRevealed && (
-                    <span className="block text-[0.6rem] text-[#7c4dff] mt-0.5">💡 {word.length} букв</span>
-                  )}
-                  {isFirstLetterRevealed && !isFound && (
-                    <span className="block text-[0.6rem] text-[#ab47bc] mt-0.5">💡 первая: {word[0]}</span>
-                  )}
-                  {isFound && (
-                    <span className="block text-[0.5rem] text-[#66bb6a] mt-0.5">📖 значение</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {/* Кнопка найденных слов */}
+        <button
+          onClick={() => setShowFoundWordsModal(true)}
+          className="w-full mb-6 px-6 py-4 bg-gradient-to-r from-[#66bb6a] to-[#43a047] text-white rounded-[20px] font-bold text-lg shadow-[0_4px_10px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_15px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all cursor-pointer"
+        >
+          📚 Найденные слова ({foundWords.length}/{validWords.length})
+        </button>
 
         {/* Message */}
         <div className={`h-8 mb-3 font-bold text-center transition-all ${
@@ -972,6 +924,53 @@ export default function App() {
             </div>
             <button
               onClick={() => setShowDefinitionsModal(false)}
+              className="w-full mt-5 px-8 py-3 border-none rounded-full font-bold text-base cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#42a5f5] to-[#1e88e5] text-white"
+            >
+              Закрыть ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Found Words Modal */}
+      {showFoundWordsModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[1001] p-4"
+          onClick={() => setShowFoundWordsModal(false)}
+        >
+          <div 
+            className="bg-white rounded-[30px] p-6 max-w-[500px] w-full max-h-[80vh] overflow-y-auto shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-[popIn_0.4s_cubic-bezier(0.175,0.885,0.32,1.275)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-2">📚</div>
+              <h3 className="text-[#8e24aa] text-2xl font-bold m-0">Найденные слова</h3>
+              <p className="text-[#8d6e63] text-sm mt-2">Нажмите на слово, чтобы узнать его значение</p>
+            </div>
+            {foundWords.length === 0 ? (
+              <div className="text-center py-8 text-[#b0bec5]">
+                <div className="text-5xl mb-3">🔍</div>
+                <p className="text-lg">Вы ещё не нашли ни одного слова</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3">
+                {foundWords.map((word, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      setSelectedWord(word);
+                      setShowFoundWordsModal(false);
+                    }}
+                    className="bg-gradient-to-br from-[#e8f5e9] to-[#c8e6c9] rounded-2xl p-4 text-center cursor-pointer hover:scale-105 hover:shadow-[0_4px_15px_rgba(76,175,80,0.3)] transition-all duration-200"
+                  >
+                    <div className="text-[#2e7d32] text-xl font-black mb-1">{word}</div>
+                    <div className="text-[#66bb6a] text-xs">📖 значение</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowFoundWordsModal(false)}
               className="w-full mt-5 px-8 py-3 border-none rounded-full font-bold text-base cursor-pointer transition-transform active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.1)] bg-gradient-to-r from-[#42a5f5] to-[#1e88e5] text-white"
             >
               Закрыть ✕
