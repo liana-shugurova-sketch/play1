@@ -659,6 +659,65 @@ export default function App() {
           <div>Очки: <span className="text-[#ef6c00] text-2xl">{score}</span></div>
         </div>
 
+        {/* Words List - перемещён выше для удобства */}
+        <div className="w-full mb-6">
+          <h3 className="text-center text-[#8e24aa] text-xl font-bold mb-4">📚 Найденные слова</h3>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-2.5 w-full justify-items-center">
+            {validWords.map((word, idx) => {
+              const isFound = foundWords.includes(word);
+              const isFirstLetterRevealed = revealedFirstLetters.includes(word);
+              const isLengthRevealed = revealedLengths.includes(word);
+              
+              let displayText = '';
+              if (isFound) {
+                displayText = word;
+              } else if (isFirstLetterRevealed) {
+                displayText = word[0] + '•'.repeat(word.length - 1);
+              } else if (isLengthRevealed) {
+                displayText = '•'.repeat(word.length);
+              } else {
+                displayText = '•'.repeat(word.length);
+              }
+              
+              return (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    if (isFound) {
+                      setSelectedWord(word);
+                    } else if (isFirstLetterRevealed) {
+                      setHintType('letter');
+                      setHintContent(`${word[0]}${'•'.repeat(word.length - 1)}`);
+                      setShowHintModal(true);
+                    } else if (isLengthRevealed) {
+                      setHintType('length');
+                      setHintContent(`${word.length} букв`);
+                      setShowHintModal(true);
+                    }
+                  }}
+                  className={`bg-white py-2 px-2 rounded-xl text-center font-bold text-sm shadow-[0_2px_5px_rgba(0,0,0,0.05)] transition-all duration-300
+                    ${isFound ? 'text-[#2e7d32] bg-[#e8f5e9] scale-105 cursor-pointer hover:scale-110 hover:shadow-[0_4px_10px_rgba(0,0,0,0.15)]' : 'text-[#b0bec5]'}
+                    ${isFirstLetterRevealed && !isFound ? 'text-[#8e24aa] bg-[#f3e5f5] cursor-pointer hover:scale-105' : ''}
+                    ${isLengthRevealed && !isFound && !isFirstLetterRevealed ? 'cursor-pointer hover:scale-105' : ''}
+                  `}
+                  title={isFound ? 'Нажми, чтобы узнать значение' : isFirstLetterRevealed || isLengthRevealed ? 'Нажми, чтобы увидеть подсказку' : ''}
+                >
+                  {displayText}
+                  {isLengthRevealed && !isFound && !isFirstLetterRevealed && (
+                    <span className="block text-[0.6rem] text-[#7c4dff] mt-0.5">💡 {word.length} букв</span>
+                  )}
+                  {isFirstLetterRevealed && !isFound && (
+                    <span className="block text-[0.6rem] text-[#ab47bc] mt-0.5">💡 первая: {word[0]}</span>
+                  )}
+                  {isFound && (
+                    <span className="block text-[0.5rem] text-[#66bb6a] mt-0.5">📖 значение</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Message */}
         <div className={`h-8 mb-3 font-bold text-center transition-all ${
           messageType === 'error' ? 'text-[#ef5350]' : 
@@ -798,62 +857,6 @@ export default function App() {
         </div>
         <div className="w-full text-center font-bold text-[#8d6e63] mb-2">
           Найдено: <span className="text-[#ef6c00]">{foundWords.length}</span> / <span>{validWords.length}</span>
-        </div>
-
-        {/* Words List */}
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-2.5 w-full mt-5 justify-items-center">
-          {validWords.map((word, idx) => {
-            const isFound = foundWords.includes(word);
-            const isFirstLetterRevealed = revealedFirstLetters.includes(word);
-            const isLengthRevealed = revealedLengths.includes(word);
-            
-            let displayText = '';
-            if (isFound) {
-              displayText = word;
-            } else if (isFirstLetterRevealed) {
-              displayText = word[0] + '•'.repeat(word.length - 1);
-            } else if (isLengthRevealed) {
-              displayText = '•'.repeat(word.length);
-            } else {
-              displayText = '•'.repeat(word.length);
-            }
-            
-            return (
-              <div
-                key={idx}
-                onClick={() => {
-                  if (isFound) {
-                    setSelectedWord(word);
-                  } else if (isFirstLetterRevealed) {
-                    setHintType('letter');
-                    setHintContent(`${word[0]}${'•'.repeat(word.length - 1)}`);
-                    setShowHintModal(true);
-                  } else if (isLengthRevealed) {
-                    setHintType('length');
-                    setHintContent(`${word.length} букв`);
-                    setShowHintModal(true);
-                  }
-                }}
-                className={`bg-white py-2 px-2 rounded-xl text-center font-bold text-sm shadow-[0_2px_5px_rgba(0,0,0,0.05)] transition-all duration-300
-                  ${isFound ? 'text-[#2e7d32] bg-[#e8f5e9] scale-105 cursor-pointer hover:scale-110 hover:shadow-[0_4px_10px_rgba(0,0,0,0.15)]' : 'text-[#b0bec5]'}
-                  ${isFirstLetterRevealed && !isFound ? 'text-[#8e24aa] bg-[#f3e5f5] cursor-pointer hover:scale-105' : ''}
-                  ${isLengthRevealed && !isFound && !isFirstLetterRevealed ? 'cursor-pointer hover:scale-105' : ''}
-                `}
-                title={isFound ? 'Нажми, чтобы узнать значение' : isFirstLetterRevealed || isLengthRevealed ? 'Нажми, чтобы увидеть подсказку' : ''}
-              >
-                {displayText}
-                {isLengthRevealed && !isFound && !isFirstLetterRevealed && (
-                  <span className="block text-[0.6rem] text-[#7c4dff] mt-0.5">💡 {word.length} букв</span>
-                )}
-                {isFirstLetterRevealed && !isFound && (
-                  <span className="block text-[0.6rem] text-[#ab47bc] mt-0.5">💡 первая: {word[0]}</span>
-                )}
-                {isFound && (
-                  <span className="block text-[0.5rem] text-[#66bb6a] mt-0.5">📖 значение</span>
-                )}
-              </div>
-            );
-          })}
         </div>
 
         {/* Info Section */}
